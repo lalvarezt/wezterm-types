@@ -201,27 +201,6 @@ return {
                     <sub><b>LM</b></sub>
                 </a>
             </td>
-            <td align="center">
-                <a href="https://github.com/gonstoll">
-                    <img src="https://avatars.githubusercontent.com/u/25900010?v=4" width="100;" alt="gonstoll"/>
-                    <br />
-                    <sub><b>Gonzalo Stoll</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/DrKJeff16">
-                    <img src="https://avatars.githubusercontent.com/u/72052712?v=4" width="100;" alt="DrKJeff16"/>
-                    <br />
-                    <sub><b>Guennadi Maximov C</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/justinsgithub">
-                    <img src="https://avatars.githubusercontent.com/u/74565194?v=4" width="100;" alt="justinsgithub"/>
-                    <br />
-                    <sub><b>Justin Angeles</b></sub>
-                </a>
-            </td>
 		</tr>
 	<tbody>
 </table>
