@@ -156,6 +156,19 @@
     "readme_name": "listeners.wezterm"
   },
   {
+    "slug": "log",
+    "repo": "sravioli/log.wz",
+    "docs_path": "docs/log.md",
+    "lua_path": "lua/wezterm/types/plugins/log.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.log.txt",
+    "tracked_ref": {
+      "kind": "release",
+      "value": "1.0.1"
+    },
+    "display_name": "log.wz",
+    "readme_name": "log.wz"
+  },
+  {
     "slug": "memo",
     "repo": "sravioli/memo.wz",
     "docs_path": "docs/memo.md",
