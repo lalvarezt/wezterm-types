@@ -12,6 +12,7 @@ contributing code, knowing what to do in specific cases, etc.
 - [Guidelines](#guidelines)
   - [What I Will Not Accept](#what-i-will-not-accept)
   - [Plugins](#plugins)
+  - [Plugin Maintenance](#plugin-maintenance)
 - [Recommendations](#recommendations)
   - [`pre-commit`](#pre-commit)
 - [Annotations Guide](#annotations-guide)
@@ -67,13 +68,72 @@ annotations.
   section.
 - Edit `docs/<MY-PLUGIN>.md`. Use the other plugin docs as reference.
 - Add the document mentioned above in [docs/README.md](./docs/README.md). **RESPECT THE ALPHABETIC ORDER**!
-- Add a new entry in the `README.md`'s [Featured Plugins](https://github.com/DrKJeff16/wezterm-types#featured-plugins).
-  Respect the alphabetic order and the table specification!
+- Follow the [Plugin Maintenance](#plugin-maintenance) workflow below to register the plugin,
+  regenerate the generated `README.md` table, and run validation.
 - Commit then push your changes. Make your PR afterwards.
   - Your commit message must look like this:
     ```
     feat(PLUGIN-NAME): add type annotations
     ```
+
+### Plugin Maintenance
+
+Use this section both when adding a plugin for the first time and when updating an existing one.
+This is the source of truth for the plugin manifest, the generated `README.md` table, and the
+optional maintenance review pages.
+
+1. Add or update the plugin entry in [`metadata/plugins.json`](./metadata/plugins.json).
+   Keep the list alphabetized and set `tracked_ref` to the exact upstream release, tag, or commit
+   that you validated against.
+
+2. Regenerate the `README.md` featured plugin table:
+   ```bash
+   ./scripts/plugin-maintenance.sh table
+   ```
+   Do not edit the generated table in `README.md` by hand.
+
+3. Run local validation:
+   ```bash
+   ./scripts/plugin-maintenance.sh validate
+   ```
+   `validate` is local-only. It checks manifest shape, inventory parity, and README table freshness.
+
+4. Generate a fresh maintenance report when you want to compare the tracked refs against upstream
+   or refresh the data used by the review page and README status badges:
+   ```bash
+   ./scripts/plugin-maintenance.sh sync
+   ```
+   `sync` requires `gh` authentication and network access. This writes `.tmp/plugin-maintenance/report.json`.
+
+5. Review the existing report:
+   ```bash
+   ./scripts/plugin-maintenance.sh review
+   ```
+   `review` reads the existing `.tmp/plugin-maintenance/report.json`. It does not run `sync` for you.
+
+6. Render the static HTML maintenance site from the existing report:
+   ```bash
+   ./scripts/plugin-maintenance.sh render-pages
+   ```
+   `render-pages` does not run `sync` for you. It only turns the current report into static files under
+   `.tmp/plugin-maintenance/pages`.
+
+7. If you want the full HTML report locally, render it and serve it with:
+   ```bash
+   ./scripts/plugin-maintenance.sh render-pages --serve
+   ```
+   This renders the pages from the current report and serves them at
+   `http://localhost:9999/plugin-maintenance/` when `python3` or `python` is available.
+   You can choose a different port:
+   ```bash
+   ./scripts/plugin-maintenance.sh render-pages --serve 8000
+   ```
+
+8. For each outdated plugin, inspect upstream manually and decide whether the local
+   annotations should be updated. For `release` and `tag` entries, compare your docs and types
+   against that upstream version. For `commit` entries, `outdated` only means upstream moved on;
+   do not bump the tracked commit unless you actually revalidated the annotations against a newer
+   upstream commit. If you do bump `tracked_ref`, repeat from step 2.
 
 ---
 
