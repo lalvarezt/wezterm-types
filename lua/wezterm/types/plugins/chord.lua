@@ -272,7 +272,6 @@ function C.register_many(specs) end
 ---@class Chord
 ---@field aliases table<string, string>
 ---@field command Chord.CommandApi
----@field mode Chord.Mode
 ---@field modifiers table<string, string>
 local M = {}
 
@@ -350,6 +349,11 @@ function M.map_batch(mappings, target) end
 ---@param config_table Config WezTerm config table.
 ---@param mappings (Chord.VimMapping|Chord.KeyEntry)[]
 function M.maps(config_table, mappings) end
+
+---@param name string
+---@param def Chord.KeyTableDef|fun(theme: table): def: Chord.KeyTableDef
+---@return Chord.Mode mode
+function M.mode(name, def) end
 
 ---Normalize a Vim-style key expression to a WezTerm key entry fragment.
 ---
