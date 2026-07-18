@@ -3,10 +3,11 @@
 
 ---@alias Chord.CommandSource "default"|"key_table"|"keys"|"registered"
 
----@class Chord.Mode
----@field __chord_mode boolean
----@field def Chord.KeyTableDef|fun(theme: table): def: Chord.KeyTableDef
----@field name string
+---@class Chord.ModeActivateOptions
+---@field one_shot? boolean
+---@field replace_current? boolean
+---@field timeout_milliseconds? integer
+---@field until_unknown? boolean
 
 ---@class Chord.ConflictEntry
 ---@field action Action
@@ -226,6 +227,18 @@
 ---WezTerm action.
 ---
 ---@field rhs? Action
+
+---@class Chord.Mode
+---@field __chord_mode boolean
+---@field def Chord.KeyTableDef|fun(theme: table): def: Chord.KeyTableDef
+---@field name string
+local Mode = {}
+
+---@param lhs string|table
+---@param desc? string
+---@param opts? Chord.ModeActivateOptions
+---@return Chord.KeyEntry|nil entry
+function Mode:activate(lhs, desc, opts) end
 
 ---@class Chord.CommandApi
 local C = {}
