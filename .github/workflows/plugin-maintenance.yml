@@ -1,0 +1,103 @@
+name: Plugin Maintenance
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/plugin-maintenance.yml"
+      - "CONTRIBUTING.md"
+      - "Makefile"
+      - "README.md"
+      - "metadata/plugins.json"
+      - "scripts/plugin-maintenance.sh"
+      - "scripts/templates/plugin-maintenance-*.tmpl"
+  push:
+    branches:
+      - main
+      - plugin-version-tracking
+    paths:
+      - ".github/workflows/plugin-maintenance.yml"
+      - "CONTRIBUTING.md"
+      - "Makefile"
+      - "README.md"
+      - "metadata/plugins.json"
+      - "scripts/plugin-maintenance.sh"
+      - "scripts/templates/plugin-maintenance-*.tmpl"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate manifest and README
+        run: |
+          ./scripts/plugin-maintenance.sh validate
+
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PLUGIN_MAINTENANCE_BUILD_DIR: .tmp/plugin-maintenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Build maintenance report
+        run: |
+          ./scripts/plugin-maintenance.sh sync
+          ./scripts/plugin-maintenance.sh render-pages
+
+      - name: Write workflow summary
+        run: |
+          jq -r '
+            "## Plugin Maintenance",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            "| Total | \(.summary.total) |",
+            "| Up to date | \(.summary.up_to_date) |",
+            "| Outdated | \(.summary.outdated) |",
+            "| Errors | \(.summary.error) |",
+            "",
+            "| Plugin | Tracked | Upstream | Status |",
+            "|--------|---------|----------|--------|",
+            (
+              .plugins[]
+              | "| \(.readme_name) | "
+                + (if .tracked_ref.kind == "commit" then "\(.tracked_ref.kind):\(.tracked_ref.value[0:7])" else "\(.tracked_ref.kind):\(.tracked_ref.value)" end)
+                + " | "
+                + (
+                    if .upstream_ref then
+                      if .upstream_ref.kind == "commit" then "\(.upstream_ref.kind):\(.upstream_ref.value[0:7])" else "\(.upstream_ref.kind):\(.upstream_ref.value)" end
+                    else
+                      "-"
+                    end
+                  )
+                + " | \(.status) |"
+            )
+          ' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .tmp/plugin-maintenance/pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
