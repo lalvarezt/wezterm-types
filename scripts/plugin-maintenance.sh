@@ -23,11 +23,15 @@ require_cmd() {
 }
 
 main_usage() {
-  printf 'Usage: %s {table|validate|sync|review|render-pages} ...\n' "$0"
+  printf 'Usage: %s {table|validate|sync|review|accept|render-pages} ...\n' "$0"
 }
 
 table_usage() {
   printf 'Usage: %s table [--check|--stdout]\n' "$0"
+}
+
+accept_usage() {
+  printf 'Usage: %s accept <slug> --from <none|kind:value> --to <kind:value>\n' "$0"
 }
 
 repo_slug() {
@@ -136,9 +140,14 @@ require_sync_report() {
   [[ -f "$SYNC_PATH" ]] || die "Missing sync report: $SYNC_PATH. Run '$0 sync' first."
 }
 
-tracked_ref_text() {
+reviewed_ref_text() {
   local kind=$1
   local value=$2
+
+  if [[ "$kind" == "none" ]]; then
+    printf 'none\n'
+    return
+  fi
 
   if [[ "$kind" == "commit" ]]; then
     printf '%s:%s\n' "$kind" "${value:0:7}"
@@ -163,13 +172,13 @@ render_table_block() {
   help_width=11
   status_width=6
 
-  while IFS=$'\t' read -r slug readme_name repo docs_path vimdoc_path tracked_kind tracked_value; do
-    local plugin_cell docs_cell help_cell status_cell tracked_text
+  while IFS=$'\t' read -r slug readme_name repo docs_path vimdoc_path reviewed_kind reviewed_value; do
+    local plugin_cell docs_cell help_cell status_cell reviewed_text
     plugin_cell="[$readme_name](https://github.com/$repo)"
     docs_cell="[$docs_path](./$docs_path)"
     help_cell="[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
-    tracked_text=$(tracked_ref_text "$tracked_kind" "$tracked_value")
-    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br><code>${tracked_text}</code>"
+    reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
+    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br><code>${reviewed_text}</code>"
 
     plugin_cells+=("$plugin_cell")
     docs_cells+=("$docs_cell")
@@ -190,8 +199,8 @@ render_table_block() {
           .repo,
           .docs_path,
           .vimdoc_path,
-          .tracked_ref.kind,
-          .tracked_ref.value
+          (.reviewed_ref.kind // "none"),
+          (.reviewed_ref.value // "")
         ]
       | @tsv
     ' "$MANIFEST_PATH"
@@ -397,7 +406,9 @@ emit_sync_error_record() {
       checked_at: $checked_at,
       repo_url: $repo_url,
       status: $status,
-      error: $error
+      error: $error,
+      upstream_ref: null,
+      compare_url: null
     }'
 }
 
@@ -423,7 +434,14 @@ emit_sync_status_record() {
       upstream_ref: {
         kind: $upstream_kind,
         value: $upstream_value
-      }
+      },
+      compare_url: (
+        if $status == "review_required" then
+          $repo_url + "/compare/" + $manifest.reviewed_ref.value + "..." + $upstream_value
+        else
+          null
+        end
+      )
     }'
 }
 
@@ -442,13 +460,19 @@ validate_manifest_schema() {
       and (.vimdoc_path | type == "string" and startswith("doc/"))
       and (.display_name | type == "string" and length > 0)
       and (.readme_name | type == "string" and length > 0)
-      and (.tracked_ref | type == "object")
+      and has("reviewed_ref")
       and (
-        .tracked_ref.kind == "release"
-        or .tracked_ref.kind == "tag"
-        or .tracked_ref.kind == "commit"
+        .reviewed_ref == null
+        or (
+          (.reviewed_ref | type == "object")
+          and (
+            .reviewed_ref.kind == "release"
+            or .reviewed_ref.kind == "tag"
+            or .reviewed_ref.kind == "commit"
+          )
+          and (.reviewed_ref.value | type == "string" and length > 0)
+        )
       )
-      and (.tracked_ref.value | type == "string" and length > 0)
     )
   ' "$MANIFEST_PATH" >/dev/null || die "Manifest validation failed"
 }
@@ -514,10 +538,10 @@ sync() {
   pages_base_url_value=$(pages_base_url)
 
   jq -c 'sort_by(.readme_name | ascii_downcase)[]' "$MANIFEST_PATH" | while IFS= read -r entry; do
-    local repo tracked_kind tracked_value repo_json release_json repo_url default_branch upstream_kind upstream_value status
+    local repo reviewed_kind reviewed_value repo_json release_json repo_url default_branch upstream_kind upstream_value status
     repo=$(jq -r '.repo' <<<"$entry")
-    tracked_kind=$(jq -r '.tracked_ref.kind' <<<"$entry")
-    tracked_value=$(jq -r '.tracked_ref.value' <<<"$entry")
+    reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$entry")
+    reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$entry")
     repo_url="https://github.com/$repo"
 
     if ! repo_json=$(gh api "repos/$repo" 2>"$tmp_err"); then
@@ -546,10 +570,12 @@ sync() {
       fi
     fi
 
-    if [[ "$tracked_kind" == "$upstream_kind" && "$tracked_value" == "$upstream_value" ]]; then
-      status="up_to_date"
+    if [[ "$reviewed_kind" == "none" ]]; then
+      status="unreviewed"
+    elif [[ "$reviewed_kind" == "$upstream_kind" && "$reviewed_value" == "$upstream_value" ]]; then
+      status="reviewed"
     else
-      status="outdated"
+      status="review_required"
     fi
 
     emit_sync_status_record "$entry" "$checked_at" "$repo_url" "$status" "$upstream_kind" "$upstream_value" >>"$tmp"
@@ -562,14 +588,16 @@ sync() {
     --arg pages_base_url "$pages_base_url_value" \
     --arg repo_branch "$(repo_branch)" \
     '{
+      schema_version: 2,
       checked_at: $checked_at,
       repo_slug: $repo_slug,
       repo_branch: $repo_branch,
       pages_base_url: $pages_base_url,
       summary: {
         total: length,
-        up_to_date: (map(select(.status == "up_to_date")) | length),
-        outdated: (map(select(.status == "outdated")) | length),
+        reviewed: (map(select(.status == "reviewed")) | length),
+        review_required: (map(select(.status == "review_required")) | length),
+        unreviewed: (map(select(.status == "unreviewed")) | length),
         error: (map(select(.status == "error")) | length)
       },
       plugins: .
@@ -577,9 +605,115 @@ sync() {
 
   rm -f "$tmp" "$tmp_err"
 
-  if [[ $strict -eq 1 ]] && ! jq -e '.summary.outdated == 0 and .summary.error == 0' "$SYNC_PATH" >/dev/null; then
-    die "Drift detected"
+  if [[ $strict -eq 1 ]] && ! jq -e '.summary.review_required == 0 and .summary.unreviewed == 0 and .summary.error == 0' "$SYNC_PATH" >/dev/null; then
+    die "Plugin review required"
   fi
+}
+
+parse_ref_arg() {
+  local value=$1
+  local allow_none=${2:-0}
+
+  if [[ "$value" == "none" && $allow_none -eq 1 ]]; then
+    PARSED_REF_KIND="none"
+    PARSED_REF_VALUE=""
+    return
+  fi
+
+  [[ "$value" == *:* ]] || die "Invalid ref '$value'; expected kind:value"
+  PARSED_REF_KIND=${value%%:*}
+  PARSED_REF_VALUE=${value#*:}
+  case "$PARSED_REF_KIND" in
+  release | tag | commit) ;;
+  *) die "Invalid ref kind: $PARSED_REF_KIND" ;;
+  esac
+  [[ -n "$PARSED_REF_VALUE" ]] || die "Ref value cannot be empty"
+}
+
+accept() {
+  local slug=${1:-}
+  local from_arg="" to_arg=""
+  local from_kind from_value to_kind to_value manifest_count current_ref report_count report_status report_ref
+  local tmp manifest_backup readme_backup
+
+  [[ -n "$slug" ]] || die "$(accept_usage)"
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --from)
+      [[ $# -gt 1 ]] || die "$(accept_usage)"
+      from_arg=$2
+      shift 2
+      ;;
+    --to)
+      [[ $# -gt 1 ]] || die "$(accept_usage)"
+      to_arg=$2
+      shift 2
+      ;;
+    *) die "$(accept_usage)" ;;
+    esac
+  done
+
+  [[ -n "$from_arg" && -n "$to_arg" ]] || die "$(accept_usage)"
+  require_cmd jq
+  require_sync_report
+  validate_manifest_schema
+
+  parse_ref_arg "$from_arg" 1
+  from_kind=$PARSED_REF_KIND
+  from_value=$PARSED_REF_VALUE
+  parse_ref_arg "$to_arg" 0
+  to_kind=$PARSED_REF_KIND
+  to_value=$PARSED_REF_VALUE
+
+  manifest_count=$(jq --arg slug "$slug" '[.[] | select(.slug == $slug)] | length' "$MANIFEST_PATH")
+  [[ "$manifest_count" == "1" ]] || die "Unknown or ambiguous plugin slug: $slug"
+
+  current_ref=$(jq -r --arg slug "$slug" '
+    .[] | select(.slug == $slug)
+    | if .reviewed_ref == null then "none" else .reviewed_ref.kind + ":" + .reviewed_ref.value end
+  ' "$MANIFEST_PATH")
+
+  if [[ "$current_ref" == "$to_kind:$to_value" ]]; then
+    printf '%s is already reviewed at %s\n' "$slug" "$current_ref"
+    return
+  fi
+
+  [[ "$current_ref" == "$from_arg" ]] || die "Stale reviewed baseline for $slug: expected $from_arg, found $current_ref"
+
+  report_count=$(jq --arg slug "$slug" '[.plugins[] | select(.slug == $slug)] | length' "$SYNC_PATH")
+  [[ "$report_count" == "1" ]] || die "Plugin $slug is missing or duplicated in $SYNC_PATH"
+  report_status=$(jq -r --arg slug "$slug" '.plugins[] | select(.slug == $slug) | .status' "$SYNC_PATH")
+  [[ "$report_status" != "error" ]] || die "Cannot accept $slug because upstream resolution failed"
+  report_ref=$(jq -r --arg slug "$slug" '
+    .plugins[] | select(.slug == $slug)
+    | if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
+  ' "$SYNC_PATH")
+  [[ "$report_ref" == "$to_arg" ]] || die "Stale upstream candidate for $slug: expected $to_arg, report contains $report_ref"
+
+  tmp=$(mktemp)
+  manifest_backup=$(mktemp)
+  readme_backup=$(mktemp)
+  cp "$MANIFEST_PATH" "$manifest_backup"
+  cp "$README_PATH" "$readme_backup"
+
+  if ! (
+    jq --arg slug "$slug" --arg kind "$to_kind" --arg value "$to_value" '
+      map(if .slug == $slug then .reviewed_ref = {kind: $kind, value: $value} else . end)
+    ' "$MANIFEST_PATH" >"$tmp"
+    mv "$tmp" "$MANIFEST_PATH"
+    write_readme_table
+    validate
+  ); then
+    cp "$manifest_backup" "$MANIFEST_PATH"
+    cp "$readme_backup" "$README_PATH"
+    rm -f "$tmp" "$manifest_backup" "$readme_backup"
+    die "Failed to accept $slug; restored manifest and README"
+  fi
+
+  rm -f "$tmp" "$manifest_backup" "$readme_backup"
+  printf 'Accepted %s: %s -> %s\n' "$slug" "$from_arg" "$to_arg"
 }
 
 review() {
@@ -592,22 +726,38 @@ review() {
 
   printf 'Plugin maintenance report written to %s\n' "$SYNC_PATH"
   printf 'Checked at: %s\n' "$(jq -r '.checked_at' "$SYNC_PATH")"
-  printf 'Summary: total=%s up_to_date=%s outdated=%s error=%s\n\n' \
+  printf 'Summary: total=%s reviewed=%s review_required=%s unreviewed=%s error=%s\n\n' \
     "$(jq -r '.summary.total' "$SYNC_PATH")" \
-    "$(jq -r '.summary.up_to_date' "$SYNC_PATH")" \
-    "$(jq -r '.summary.outdated' "$SYNC_PATH")" \
+    "$(jq -r '.summary.reviewed' "$SYNC_PATH")" \
+    "$(jq -r '.summary.review_required' "$SYNC_PATH")" \
+    "$(jq -r '.summary.unreviewed' "$SYNC_PATH")" \
     "$(jq -r '.summary.error' "$SYNC_PATH")"
 
   print_report_section \
-    "Outdated plugins:" \
-    $'Plugin\tRepository\tTracked\tUpstream' \
+    "Plugins requiring review:" \
+    $'Plugin\tRepository\tReviewed\tUpstream\tDiff' \
     '
       .plugins[]
-      | select(.status == "outdated")
+      | select(.status == "review_required")
       | [
           .readme_name,
           .repo,
-          (if .tracked_ref.kind == "commit" then .tracked_ref.kind + ":" + .tracked_ref.value[0:7] else .tracked_ref.kind + ":" + .tracked_ref.value end),
+          (if .reviewed_ref.kind == "commit" then .reviewed_ref.kind + ":" + .reviewed_ref.value[0:7] else .reviewed_ref.kind + ":" + .reviewed_ref.value end),
+          (if .upstream_ref.kind == "commit" then .upstream_ref.kind + ":" + .upstream_ref.value[0:7] else .upstream_ref.kind + ":" + .upstream_ref.value end),
+          .compare_url
+        ]
+      | @tsv
+    '
+
+  print_report_section \
+    "Plugins not yet reviewed:" \
+    $'Plugin\tRepository\tUpstream' \
+    '
+      .plugins[]
+      | select(.status == "unreviewed")
+      | [
+          .readme_name,
+          .repo,
           (if .upstream_ref.kind == "commit" then .upstream_ref.kind + ":" + .upstream_ref.value[0:7] else .upstream_ref.kind + ":" + .upstream_ref.value end)
         ]
       | @tsv
@@ -625,7 +775,7 @@ review() {
 }
 
 render_pages() {
-  local report_path repo_slug_value repo_branch_value plugin_rows summary_html page_template page_html redirect_template
+  local report_path repo_slug_value repo_branch_value plugin_rows summary_html summary_tmp rows_tmp redirect_template
 
   require_cmd jq
   require_sync_report
@@ -646,17 +796,21 @@ render_pages() {
     status=$(jq -r '.status' <<<"$plugin")
 
     case "$status" in
-    up_to_date)
-      message="up to date"
+    reviewed)
+      message="reviewed"
       color="brightgreen"
       ;;
-    outdated)
-      message="outdated"
+    review_required)
+      message="review required"
       color="yellow"
+      ;;
+    unreviewed)
+      message="unreviewed"
+      color="orange"
       ;;
     *)
       message="error"
-      color="orange"
+      color="red"
       ;;
     esac
 
@@ -671,8 +825,9 @@ render_pages() {
   summary_html=$(jq -r '
     "<ul class=\"summary\">"
     + "<li><strong>Total:</strong> \(.summary.total)</li>"
-    + "<li><strong>Up to date:</strong> \(.summary.up_to_date)</li>"
-    + "<li><strong>Outdated:</strong> \(.summary.outdated)</li>"
+    + "<li><strong>Reviewed:</strong> \(.summary.reviewed)</li>"
+    + "<li><strong>Review required:</strong> \(.summary.review_required)</li>"
+    + "<li><strong>Unreviewed:</strong> \(.summary.unreviewed)</li>"
     + "<li><strong>Errors:</strong> \(.summary.error)</li>"
     + "<li><strong>Checked at:</strong> <code>\(.checked_at)</code></li>"
     + "</ul>"
@@ -681,12 +836,15 @@ render_pages() {
   plugin_rows=$(jq -r --arg repo_slug "$repo_slug_value" --arg repo_branch "$repo_branch_value" '
     .plugins[]
     | (
-      if .status == "outdated" and .upstream_ref and .tracked_ref.value != .upstream_ref.value then
-        "https://github.com/" + .repo + "/compare/" + .tracked_ref.value + "..." + .upstream_ref.value
+      if .reviewed_ref == null then
+        "none"
       else
-        ""
+        .reviewed_ref.kind + ":" + .reviewed_ref.value
       end
-    ) as $compare_url
+    ) as $reviewed_arg
+    | (
+      if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
+    ) as $candidate_arg
     | (
       if .upstream_ref then
         if .upstream_ref.kind == "commit" then
@@ -699,35 +857,62 @@ render_pages() {
       end
     ) as $upstream_text
     | (
-      if .tracked_ref.kind == "commit" then
-        (.tracked_ref.kind + ":" + .tracked_ref.value[0:7])
+      if .reviewed_ref == null then
+        "none"
+      elif .reviewed_ref.kind == "commit" then
+        (.reviewed_ref.kind + ":" + .reviewed_ref.value[0:7])
       else
-        (.tracked_ref.kind + ":" + .tracked_ref.value)
+        (.reviewed_ref.kind + ":" + .reviewed_ref.value)
       end
-    ) as $tracked_text
+    ) as $reviewed_text
     | (
-      if .upstream_ref then
-        "<code>" + ($upstream_text | @html) + "</code>"
+      if .upstream_ref == null then
+        ""
+      elif .upstream_ref.kind == "commit" then
+        .repo_url + "/commit/" + .upstream_ref.value
+      elif .upstream_ref.kind == "release" then
+        .repo_url + "/releases/tag/" + .upstream_ref.value
       else
-        "<code>-</code>"
+        .repo_url + "/tree/" + .upstream_ref.value
       end
-      + (
-          if $compare_url != "" then
-            "<div class=\"cell-action\"><a class=\"compare-link\" href=\"" + ($compare_url | @html) + "\">diff ↗</a></div>"
-          else
-            ""
-          end
-        )
-    ) as $upstream_cell
+    ) as $upstream_url
+    | (
+      "gh workflow run plugin-maintenance-accept.yml"
+      + " --repo " + ($repo_slug | @sh)
+      + " -f plugin=" + (.slug | @sh)
+      + " -f expected_reviewed_ref=" + ($reviewed_arg | @sh)
+      + " -f candidate_ref=" + ($candidate_arg | @sh)
+    ) as $accept_command
+    | (
+      if .status == "review_required" then
+        "<a class=\"compare-link\" href=\"" + (.compare_url | @html) + "\">Review diff ↗</a>"
+      elif .status == "unreviewed" then
+        "<a class=\"compare-link\" href=\"" + ($upstream_url | @html) + "\">Review upstream ↗</a>"
+      else
+        ""
+      end
+    ) as $review_link
+    | (
+      if .status == "review_required" or .status == "unreviewed" then
+        "<div class=\"review-actions\">"
+        + $review_link
+        + "<button type=\"button\" class=\"copy-command\" data-command=\"" + ($accept_command | @html) + "\">Copy acceptance command</button>"
+        + "<a href=\"https://github.com/" + ($repo_slug | @html) + "/actions/workflows/plugin-maintenance-accept.yml\">Open acceptance workflow ↗</a>"
+        + "</div>"
+      else
+        ""
+      end
+    ) as $actions_cell
     | "<tr id=\"\(.slug)\" data-status=\"\(.status | @html)\">"
       + "<td><a href=\"https://github.com/\(.repo)\">\(.readme_name | @html)</a></td>"
       + "<td><a href=\"https://github.com/\($repo_slug)/blob/\($repo_branch)/\(.docs_path)\">\(.docs_path | @html)</a></td>"
       + "<td><a href=\"https://github.com/\($repo_slug)/blob/\($repo_branch)/\(.vimdoc_path)\">\(.vimdoc_path | @html)</a></td>"
-      + "<td>"
-      + "<img alt=\"\(.status | @html)\" src=\"BADGE_URL:\(.slug)\" />"
-      + "<br><code>\($tracked_text | @html)</code>"
+      + "<td><img alt=\"\(.status | @html)\" src=\"BADGE_URL:\(.slug)\" />"
+      + (if .status == "error" then "<div class=\"error-text\">" + (.error | @html) + "</div>" else "" end)
       + "</td>"
-      + "<td>" + $upstream_cell + "</td>"
+      + "<td><code>\($reviewed_text | @html)</code></td>"
+      + "<td><code>\($upstream_text | @html)</code></td>"
+      + "<td>" + $actions_cell + "</td>"
       + "</tr>"
   ' "$report_path")
 
@@ -735,10 +920,24 @@ render_pages() {
     plugin_rows=${plugin_rows//BADGE_URL:$slug/$(badge_url "$slug")}
   done < <(jq -r '.plugins[].slug' "$report_path")
 
-  page_template=$(<"$PAGE_TEMPLATE_PATH")
-  page_html=${page_template//__SUMMARY_HTML__/$summary_html}
-  page_html=${page_html//__PLUGIN_ROWS__/$plugin_rows}
-  printf '%s\n' "$page_html" >"$PAGES_DIR/plugin-maintenance/index.html"
+  summary_tmp=$(mktemp)
+  rows_tmp=$(mktemp)
+  printf '%s\n' "$summary_html" >"$summary_tmp"
+  printf '%s\n' "$plugin_rows" >"$rows_tmp"
+  awk -v summary_file="$summary_tmp" -v rows_file="$rows_tmp" '
+    $0 == "__SUMMARY_HTML__" {
+      while ((getline line < summary_file) > 0) print line
+      close(summary_file)
+      next
+    }
+    $0 == "__PLUGIN_ROWS__" {
+      while ((getline line < rows_file) > 0) print line
+      close(rows_file)
+      next
+    }
+    { print }
+  ' "$PAGE_TEMPLATE_PATH" >"$PAGES_DIR/plugin-maintenance/index.html"
+  rm -f "$summary_tmp" "$rows_tmp"
 
   redirect_template=$(<"$REDIRECT_TEMPLATE_PATH")
   printf '%s\n' "$redirect_template" >"$PAGES_DIR/index.html"
@@ -763,6 +962,10 @@ main() {
   review)
     shift
     review "$@"
+    ;;
+  accept)
+    shift
+    accept "$@"
     ;;
   render-pages)
     shift

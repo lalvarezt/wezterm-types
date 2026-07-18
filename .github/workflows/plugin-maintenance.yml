@@ -2,11 +2,11 @@ name: Plugin Maintenance
 
 on:
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "17 6 * * 0"
   workflow_dispatch:
   pull_request:
     paths:
-      - ".github/workflows/plugin-maintenance.yml"
+      - ".github/workflows/plugin-maintenance*.yml"
       - "CONTRIBUTING.md"
       - "Makefile"
       - "README.md"
@@ -16,9 +16,8 @@ on:
   push:
     branches:
       - main
-      - plugin-version-tracking
     paths:
-      - ".github/workflows/plugin-maintenance.yml"
+      - ".github/workflows/plugin-maintenance*.yml"
       - "CONTRIBUTING.md"
       - "Makefile"
       - "README.md"
@@ -34,20 +33,17 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate manifest and README
-        run: |
-          ./scripts/plugin-maintenance.sh validate
+        run: ./scripts/plugin-maintenance.sh validate
 
-  publish:
+  build-report:
     if: github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
-      pages: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      error_count: ${{ steps.report.outputs.error_count }}
+      should_publish: ${{ steps.publish_check.outputs.should_publish }}
     env:
       GH_TOKEN: ${{ github.token }}
       PLUGIN_MAINTENANCE_BUILD_DIR: .tmp/plugin-maintenance
@@ -63,10 +59,15 @@ jobs:
           ./scripts/plugin-maintenance.sh sync
           ./scripts/plugin-maintenance.sh render-pages
 
+      - name: Record report metadata
+        id: report
+        run: |
+          echo "error_count=$(jq -r '.summary.error' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json")" >> "$GITHUB_OUTPUT"
+
       - name: Compute publish signature
         run: |
           set -euo pipefail
-          report_hash=$(jq -c 'del(.checked_at)' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json" | sha256sum | cut -d' ' -f1)
+          report_hash=$(jq -c 'del(.checked_at) | .plugins |= map(del(.checked_at))' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json" | sha256sum | cut -d' ' -f1)
           script_hash=$(sha256sum scripts/plugin-maintenance.sh | cut -d' ' -f1)
           page_template_hash=$(sha256sum scripts/templates/plugin-maintenance-page.html.tmpl | cut -d' ' -f1)
           redirect_template_hash=$(sha256sum scripts/templates/plugin-maintenance-redirect.html.tmpl | cut -d' ' -f1)
@@ -89,12 +90,13 @@ jobs:
           SIGNATURE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/plugin-maintenance/content-signature.json
         run: |
           set -euo pipefail
-          local_signature="${PLUGIN_MAINTENANCE_BUILD_DIR}/pages/plugin-maintenance/content-signature.json"
-          remote_signature=$(mktemp)
           should_publish=true
 
-          if curl --fail --silent --show-error --location "$SIGNATURE_URL" -o "$remote_signature"; then
-            if cmp -s "$local_signature" "$remote_signature"; then
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            local_signature="${PLUGIN_MAINTENANCE_BUILD_DIR}/pages/plugin-maintenance/content-signature.json"
+            remote_signature=$(mktemp)
+            if curl --fail --silent --show-error --location "$SIGNATURE_URL" -o "$remote_signature" \
+              && cmp -s "$local_signature" "$remote_signature"; then
               should_publish=false
             fi
           fi
@@ -102,12 +104,7 @@ jobs:
           echo "should_publish=${should_publish}" >> "$GITHUB_OUTPUT"
 
           if [[ "$should_publish" == "false" ]]; then
-            {
-              echo ""
-              echo "No GitHub Pages deploy was needed."
-              echo ""
-              echo "The generated maintenance site matched the currently published content."
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "The generated maintenance site matches the published content; skipping this push-triggered deployment." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Write workflow summary
@@ -118,24 +115,19 @@ jobs:
             "| Metric | Value |",
             "|--------|-------|",
             "| Total | \(.summary.total) |",
-            "| Up to date | \(.summary.up_to_date) |",
-            "| Outdated | \(.summary.outdated) |",
+            "| Reviewed | \(.summary.reviewed) |",
+            "| Review required | \(.summary.review_required) |",
+            "| Unreviewed | \(.summary.unreviewed) |",
             "| Errors | \(.summary.error) |",
             "",
-            "| Plugin | Tracked | Upstream | Status |",
-            "|--------|---------|----------|--------|",
+            "| Plugin | Reviewed | Upstream | Status |",
+            "|--------|----------|----------|--------|",
             (
               .plugins[]
               | "| \(.readme_name) | "
-                + (if .tracked_ref.kind == "commit" then "\(.tracked_ref.kind):\(.tracked_ref.value[0:7])" else "\(.tracked_ref.kind):\(.tracked_ref.value)" end)
+                + (if .reviewed_ref == null then "none" elif .reviewed_ref.kind == "commit" then "\(.reviewed_ref.kind):\(.reviewed_ref.value[0:7])" else "\(.reviewed_ref.kind):\(.reviewed_ref.value)" end)
                 + " | "
-                + (
-                    if .upstream_ref then
-                      if .upstream_ref.kind == "commit" then "\(.upstream_ref.kind):\(.upstream_ref.value[0:7])" else "\(.upstream_ref.kind):\(.upstream_ref.value)" end
-                    else
-                      "-"
-                    end
-                  )
+                + (if .upstream_ref == null then "-" elif .upstream_ref.kind == "commit" then "\(.upstream_ref.kind):\(.upstream_ref.value[0:7])" else "\(.upstream_ref.kind):\(.upstream_ref.value)" end)
                 + " | \(.status) |"
             )
           ' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json" >> "$GITHUB_STEP_SUMMARY"
@@ -146,7 +138,145 @@ jobs:
         with:
           path: .tmp/plugin-maintenance/pages
 
+      - name: Upload report artifact
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-maintenance-report
+          path: .tmp/plugin-maintenance/report.json
+          retention-days: 1
+
+  deploy-pages:
+    if: needs.build-report.outputs.should_publish == 'true'
+    needs: build-report
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
-        if: steps.publish_check.outputs.should_publish == 'true'
         id: deployment
         uses: actions/deploy-pages@v5
+
+  update-weekly-digest:
+    if: github.event_name == 'schedule'
+    needs:
+      - build-report
+      - deploy-pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DIGEST_TITLE: "Plugin maintenance: upstream changes to review"
+    steps:
+      - name: Download report artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: plugin-maintenance-report
+          path: .tmp/plugin-maintenance
+
+      - name: Render and update rolling digest
+        run: |
+          set -euo pipefail
+          report=.tmp/plugin-maintenance/report.json
+          body=$(mktemp)
+
+          jq -r '
+            def ref_text($ref):
+              if $ref == null then "none" else $ref.kind + ":" + $ref.value end;
+            def upstream_url:
+              if .upstream_ref == null then .repo_url
+              elif .upstream_ref.kind == "commit" then .repo_url + "/commit/" + .upstream_ref.value
+              elif .upstream_ref.kind == "release" then .repo_url + "/releases/tag/" + .upstream_ref.value
+              else .repo_url + "/tree/" + .upstream_ref.value
+              end;
+            .repo_slug as $repo_slug
+            | (.pages_base_url + "/plugin-maintenance/") as $dashboard
+            | "<!-- plugin-maintenance-digest -->",
+              "# Plugin maintenance: upstream changes to review",
+              "",
+              "Last checked: `\(.checked_at)`",
+              "",
+              "Reviewed: **\(.summary.reviewed)** · Review required: **\(.summary.review_required)** · Unreviewed: **\(.summary.unreviewed)** · Errors: **\(.summary.error)**",
+              "",
+              "[Open the maintenance dashboard](\($dashboard))",
+              "",
+              (
+                .plugins[]
+                | select(.status != "reviewed")
+                | "## [\(.readme_name)](\($dashboard)#\(.slug))",
+                  "",
+                  "- Status: `\(.status)`",
+                  "- Reviewed baseline: `\(ref_text(.reviewed_ref))`",
+                  "- Latest upstream: `\(ref_text(.upstream_ref))`",
+                  (
+                    if .status == "error" then "- Error: \(.error)"
+                    elif .compare_url then "- [Review diff](\(.compare_url))"
+                    else "- [Review upstream](\(upstream_url))"
+                    end
+                  ),
+                  (
+                    if .status == "review_required" or .status == "unreviewed" then
+                      "",
+                      "```bash",
+                      "gh workflow run plugin-maintenance-accept.yml --repo \($repo_slug) -f plugin=\(.slug | @sh) -f expected_reviewed_ref=\(ref_text(.reviewed_ref) | @sh) -f candidate_ref=\(ref_text(.upstream_ref) | @sh)",
+                      "```"
+                    else empty end
+                  ),
+                  ""
+              )
+          ' "$report" > "$body"
+
+          outstanding=$(jq '[.plugins[] | select(.status != "reviewed")] | length' "$report")
+          gh label create plugin-maintenance --color D4A72C --description "Automated plugin upstream review" --force
+
+          issue_json=$(gh issue list --state all --label plugin-maintenance --limit 100 --json number,title,state \
+            --jq '[.[] | select(.title == env.DIGEST_TITLE)][0] // {}')
+          issue_number=$(jq -r '.number // empty' <<< "$issue_json")
+          issue_state=$(jq -r '.state // empty' <<< "$issue_json")
+
+          if (( outstanding > 0 )); then
+            if [[ -z "$issue_number" ]]; then
+              gh issue create --title "$DIGEST_TITLE" --label plugin-maintenance --body-file "$body"
+            else
+              gh issue edit "$issue_number" --body-file "$body"
+              if [[ "$issue_state" == "CLOSED" ]]; then
+                gh issue reopen "$issue_number"
+              fi
+            fi
+          elif [[ -n "$issue_number" ]]; then
+            {
+              echo '<!-- plugin-maintenance-digest -->'
+              echo '# Plugin maintenance: all reviewed'
+              echo
+              echo "No upstream changes require review as of \`$(jq -r '.checked_at' "$report")\`."
+            } > "$body"
+            gh issue edit "$issue_number" --body-file "$body"
+            if [[ "$issue_state" == "OPEN" ]]; then
+              gh issue close "$issue_number"
+            fi
+          fi
+
+  report-health:
+    if: always() && needs.build-report.result == 'success'
+    needs:
+      - build-report
+      - deploy-pages
+      - update-weekly-digest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment, digest, and upstream health
+        env:
+          ERROR_COUNT: ${{ needs.build-report.outputs.error_count }}
+          DEPLOY_RESULT: ${{ needs.deploy-pages.result }}
+          DIGEST_RESULT: ${{ needs.update-weekly-digest.result }}
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_RESULT" != "failure" ]] || { echo "GitHub Pages deployment failed" >&2; exit 1; }
+          [[ "$DIGEST_RESULT" != "failure" ]] || { echo "Weekly digest update failed" >&2; exit 1; }
+          [[ "$ERROR_COUNT" == "0" ]] || { echo "$ERROR_COUNT upstream repositories could not be resolved" >&2; exit 1; }

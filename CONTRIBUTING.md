@@ -80,11 +80,12 @@ annotations.
 
 Use this section both when adding a plugin for the first time and when updating an existing one.
 This is the source of truth for the plugin manifest, the generated `README.md` table, and the
-optional maintenance review pages.
+maintenance review pages.
 
 1. Add or update the plugin entry in [`metadata/plugins.json`](./metadata/plugins.json).
-   Keep the list alphabetized and set `tracked_ref` to the exact upstream release, tag, or commit
-   that you validated against.
+   Keep the list alphabetized. `reviewed_ref` records only the last upstream release, tag, or
+   commit deliberately reviewed by a maintainer; it does not record annotation provenance or
+   coverage. Use `null` when a plugin has not been reviewed yet.
 
 2. Regenerate the `README.md` featured plugin table:
    ```bash
@@ -98,7 +99,7 @@ optional maintenance review pages.
    ```
    `validate` is local-only. It checks manifest shape, inventory parity, and README table freshness.
 
-4. Generate a fresh maintenance report when you want to compare the tracked refs against upstream
+4. Generate a fresh maintenance report when you want to compare the reviewed refs against upstream
    or refresh the data used by the review page and README status badges:
    ```bash
    ./scripts/plugin-maintenance.sh sync
@@ -129,11 +130,22 @@ optional maintenance review pages.
    ./scripts/plugin-maintenance.sh render-pages --serve 8000
    ```
 
-8. For each outdated plugin, inspect upstream manually and decide whether the local
-   annotations should be updated. For `release` and `tag` entries, compare your docs and types
-   against that upstream version. For `commit` entries, `outdated` only means upstream moved on;
-   do not bump the tracked commit unless you actually revalidated the annotations against a newer
-   upstream commit. If you do bump `tracked_ref`, repeat from step 2.
+8. For each plugin marked `review_required` or `unreviewed`, inspect the upstream change. Leave its
+   baseline unchanged while functional work remains outstanding. When the upstream change can be
+   accepted, use the exact command shown on the maintenance dashboard to dispatch
+   `plugin-maintenance-accept.yml`. The workflow validates the reviewed and candidate refs, then
+   opens a PR containing only the manifest and generated README changes.
+
+   The equivalent local command, using an existing fresh report, is:
+   ```bash
+   ./scripts/plugin-maintenance.sh accept <slug> \
+     --from <none|kind:value> \
+     --to <kind:value>
+   ```
+
+9. GitHub Actions refreshes the public report every Sunday at `06:17 UTC` and creates, updates,
+   reopens, or closes one unassigned rolling issue named
+   `Plugin maintenance: upstream changes to review`.
 
 ---
 

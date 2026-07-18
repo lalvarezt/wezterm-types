@@ -5,7 +5,7 @@
     "docs_path": "docs/agent-deck.md",
     "lua_path": "lua/wezterm/types/plugins/agent-deck.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.agent-deck.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "bd5a57e7806032998e6cae56ade67b72a08b7868"
     },
@@ -18,7 +18,7 @@
     "docs_path": "docs/ai-commander.md",
     "lua_path": "lua/wezterm/types/plugins/ai-commander.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.ai-commander.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "8b063e4a89f5057851649a1fd868b83e4b9f74a8"
     },
@@ -31,7 +31,7 @@
     "docs_path": "docs/ai-helper.md",
     "lua_path": "lua/wezterm/types/plugins/ai-helper.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.ai-helper.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "68ce596a822761eb796d40646bb8d02f94f7155e"
     },
@@ -44,7 +44,7 @@
     "docs_path": "docs/attention.md",
     "lua_path": "lua/wezterm/types/plugins/attention.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.attention.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v0.3.3"
     },
@@ -57,7 +57,7 @@
     "docs_path": "docs/bar.md",
     "lua_path": "lua/wezterm/types/plugins/bar.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.bar.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.4.0"
     },
@@ -70,7 +70,7 @@
     "docs_path": "docs/battery.md",
     "lua_path": "lua/wezterm/types/plugins/battery.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.battery.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "0b6d503db725ea11b26ef5723a29707bdf3a3f8b"
     },
@@ -78,12 +78,22 @@
     "readme_name": "battery.wez"
   },
   {
+    "slug": "chord",
+    "repo": "sravioli/chord.wz",
+    "docs_path": "docs/chord.md",
+    "lua_path": "lua/wezterm/types/plugins/chord.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.chord.txt",
+    "reviewed_ref": null,
+    "display_name": "chord.wz",
+    "readme_name": "chord.wz"
+  },
+  {
     "slug": "cmd-sender",
     "repo": "aureolebigben/wezterm-cmd-sender",
     "docs_path": "docs/cmd-sender.md",
     "lua_path": "lua/wezterm/types/plugins/cmd-sender.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.cmd-sender.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v1.0.1"
     },
@@ -96,7 +106,7 @@
     "docs_path": "docs/cmdpicker.md",
     "lua_path": "lua/wezterm/types/plugins/cmdpicker.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.cmdpicker.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "0.2.0"
     },
@@ -109,7 +119,7 @@
     "docs_path": "docs/dev.md",
     "lua_path": "lua/wezterm/types/plugins/dev.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.dev.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "1b5d9e06a084b6ee8382636137a37c77c221df27"
     },
@@ -122,7 +132,7 @@
     "docs_path": "docs/kanagawa.md",
     "lua_path": "lua/wezterm/types/plugins/kanagawa.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.kanagawa.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.0.1"
     },
@@ -130,12 +140,22 @@
     "readme_name": "kanagawa.wz"
   },
   {
+    "slug": "lantern",
+    "repo": "sravioli/lantern.wz",
+    "docs_path": "docs/lantern.md",
+    "lua_path": "lua/wezterm/types/plugins/lantern.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.lantern.txt",
+    "reviewed_ref": null,
+    "display_name": "lantern.wz",
+    "readme_name": "lantern.wz"
+  },
+  {
     "slug": "lib",
     "repo": "ChrisGVE/lib.wezterm",
     "docs_path": "docs/lib.md",
     "lua_path": "lua/wezterm/types/plugins/lib.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.lib.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "d87b2025dffcd6168a02d7f2df4e28221215c5d5"
     },
@@ -148,7 +168,7 @@
     "docs_path": "docs/listeners.md",
     "lua_path": "lua/wezterm/types/plugins/listeners.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.listeners.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "938eb37ddae3eec7540a40e07faae0ac80139fac"
     },
@@ -161,7 +181,7 @@
     "docs_path": "docs/log.md",
     "lua_path": "lua/wezterm/types/plugins/log.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.log.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.0.1"
     },
@@ -174,7 +194,7 @@
     "docs_path": "docs/memo.md",
     "lua_path": "lua/wezterm/types/plugins/memo.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.memo.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "0.1.1"
     },
@@ -187,7 +207,7 @@
     "docs_path": "docs/modal.md",
     "lua_path": "lua/wezterm/types/plugins/modal.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.modal.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.0"
     },
@@ -200,7 +220,7 @@
     "docs_path": "docs/passrelay.md",
     "lua_path": "lua/wezterm/types/plugins/passrelay.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.passrelay.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "8a80a945bb1637bfac612a848012f1e8691d94d9"
     },
@@ -213,7 +233,7 @@
     "docs_path": "docs/pinned-tabs.md",
     "lua_path": "lua/wezterm/types/plugins/pinned-tabs.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.pinned-tabs.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "a58ed31eade25eea6f70699babd6a08508e735cd"
     },
@@ -226,7 +246,7 @@
     "docs_path": "docs/pivot-panes.md",
     "lua_path": "lua/wezterm/types/plugins/pivot-panes.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.pivot-panes.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "6d4d6282bed987962069eccf9c210eb82ed21ee8"
     },
@@ -239,7 +259,7 @@
     "docs_path": "docs/presentation.md",
     "lua_path": "lua/wezterm/types/plugins/presentation.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.presentation.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "55f4bbfe17d3273a2347d6e04903fcecd3f2ee11"
     },
@@ -252,7 +272,7 @@
     "docs_path": "docs/quick-domains.md",
     "lua_path": "lua/wezterm/types/plugins/quick-domains.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.quick-domains.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "e026c6a807b68ce727453c0a19067452d6474c23"
     },
@@ -265,7 +285,7 @@
     "docs_path": "docs/quickselect.md",
     "lua_path": "lua/wezterm/types/plugins/quickselect.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.quickselect.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "2b16aaae387321ac32d682663afb954f1c1916d0"
     },
@@ -278,7 +298,7 @@
     "docs_path": "docs/quota-limit.md",
     "lua_path": "lua/wezterm/types/plugins/quota-limit.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.quota-limit.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "5dd4ec735c5e7cae9b74e2907733514d46fa0289"
     },
@@ -291,7 +311,7 @@
     "docs_path": "docs/replay.md",
     "lua_path": "lua/wezterm/types/plugins/replay.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.replay.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "936fc26b616ab151091f435c97b1e62cce0908f8"
     },
@@ -304,7 +324,7 @@
     "docs_path": "docs/resurrect.md",
     "lua_path": "lua/wezterm/types/plugins/resurrect.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.resurrect.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v1.0.0"
     },
@@ -312,12 +332,22 @@
     "readme_name": "resurrect.wezterm"
   },
   {
+    "slug": "ribbon",
+    "repo": "sravioli/ribbon.wz",
+    "docs_path": "docs/ribbon.md",
+    "lua_path": "lua/wezterm/types/plugins/ribbon.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.ribbon.txt",
+    "reviewed_ref": null,
+    "display_name": "ribbon.wz",
+    "readme_name": "ribbon.wz"
+  },
+  {
     "slug": "rosepine",
     "repo": "neapsix/wezterm",
     "docs_path": "docs/rosepine.md",
     "lua_path": "lua/wezterm/types/plugins/rosepine.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.rosepine.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "7b7dff56fea74454c4844f9bb4e59e0ec9cb468c"
     },
@@ -330,7 +360,7 @@
     "docs_path": "docs/sessionizer.md",
     "lua_path": "lua/wezterm/types/plugins/sessionizer.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.sessionizer.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v1.0.0"
     },
@@ -338,12 +368,22 @@
     "readme_name": "sessionizer.wezterm"
   },
   {
+    "slug": "sigil",
+    "repo": "sravioli/sigil.wz",
+    "docs_path": "docs/sigil.md",
+    "lua_path": "lua/wezterm/types/plugins/sigil.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.sigil.txt",
+    "reviewed_ref": null,
+    "display_name": "sigil.wz",
+    "readme_name": "sigil.wz"
+  },
+  {
     "slug": "smart-splits",
     "repo": "mrjones2014/smart-splits.nvim",
     "docs_path": "docs/smart-splits.md",
     "lua_path": "lua/wezterm/types/plugins/smart-splits.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.smart-splits.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v2.0.5"
     },
@@ -356,7 +396,7 @@
     "docs_path": "docs/smart-workspace-switcher.md",
     "lua_path": "lua/wezterm/types/plugins/smart-workspace-switcher.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.smart-workspace-switcher.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.2.0"
     },
@@ -369,7 +409,7 @@
     "docs_path": "docs/stack.md",
     "lua_path": "lua/wezterm/types/plugins/stack.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.stack.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "237ce91593d15f457974fff516ad37fa076f7cfc"
     },
@@ -377,12 +417,32 @@
     "readme_name": "stack.wez"
   },
   {
+    "slug": "sync",
+    "repo": "dfsramos/wezterm-sync",
+    "docs_path": "docs/sync.md",
+    "lua_path": "lua/wezterm/types/plugins/sync.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.sync.txt",
+    "reviewed_ref": null,
+    "display_name": "wezterm-sync",
+    "readme_name": "wezterm-sync"
+  },
+  {
+    "slug": "sync-panes",
+    "repo": "annie444/sync-panes.wez",
+    "docs_path": "docs/sync-panes.md",
+    "lua_path": "lua/wezterm/types/plugins/sync-panes.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.sync-panes.txt",
+    "reviewed_ref": null,
+    "display_name": "sync-panes.wez",
+    "readme_name": "sync-panes.wez"
+  },
+  {
     "slug": "tabline",
     "repo": "michaelbrusegard/tabline.wez",
     "docs_path": "docs/tabline.md",
     "lua_path": "lua/wezterm/types/plugins/tabline.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.tabline.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v1.6.0"
     },
@@ -395,7 +455,7 @@
     "docs_path": "docs/tabsets.md",
     "lua_path": "lua/wezterm/types/plugins/tabsets.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.tabsets.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "tag",
       "value": "v1.0.0"
     },
@@ -408,7 +468,7 @@
     "docs_path": "docs/toggle-terminal.md",
     "lua_path": "lua/wezterm/types/plugins/toggle-terminal.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.toggle-terminal.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "5eb0115d04cfd61351de2350c9af89616595c7c0"
     },
@@ -421,7 +481,7 @@
     "docs_path": "docs/warp.md",
     "lua_path": "lua/wezterm/types/plugins/warp.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.warp.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "0.1.1"
     },
@@ -434,7 +494,7 @@
     "docs_path": "docs/wez-pain-control.md",
     "lua_path": "lua/wezterm/types/plugins/wez-pain-control.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wez-pain-control.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "f11241a846af2aaec6d41ece80f429cae09e3b86"
     },
@@ -447,7 +507,7 @@
     "docs_path": "docs/wez-tmux.md",
     "lua_path": "lua/wezterm/types/plugins/wez-tmux.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wez-tmux.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "d53fb08b8212d82c34abacfce167bfa79919bb41"
     },
@@ -460,7 +520,7 @@
     "docs_path": "docs/wezterm-config.md",
     "lua_path": "lua/wezterm/types/plugins/wezterm-config.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wezterm-config.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "53aebc69c74bbfd708ea07a3459c8ca6ef9d9432"
     },
@@ -473,7 +533,7 @@
     "docs_path": "docs/wezterm-sessions.md",
     "lua_path": "lua/wezterm/types/plugins/wezterm-sessions.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wezterm-sessions.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.7.1"
     },
@@ -486,7 +546,7 @@
     "docs_path": "docs/wezterm-status.md",
     "lua_path": "lua/wezterm/types/plugins/wezterm-status.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wezterm-status.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "e53799372fb1f38c138b719fd39d9e41bb7b423d"
     },
@@ -499,7 +559,7 @@
     "docs_path": "docs/wezterm-tabs.md",
     "lua_path": "lua/wezterm/types/plugins/wezterm-tabs.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wezterm-tabs.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "47e53745191048b970fe11752d7131842c0791f6"
     },
@@ -512,7 +572,7 @@
     "docs_path": "docs/wezterm-theme-rotator.md",
     "lua_path": "lua/wezterm/types/plugins/wezterm-theme-rotator.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wezterm-theme-rotator.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "a3ce87f68f753a2a30d3a43e47c79b198fec2b1a"
     },
@@ -520,12 +580,22 @@
     "readme_name": "wezterm-theme-rotator"
   },
   {
+    "slug": "widgets",
+    "repo": "usrivastava92/widgets.wez",
+    "docs_path": "docs/widgets.md",
+    "lua_path": "lua/wezterm/types/plugins/widgets.lua",
+    "vimdoc_path": "doc/wezterm-types-plugin.widgets.txt",
+    "reviewed_ref": null,
+    "display_name": "widgets.wez",
+    "readme_name": "widgets.wez"
+  },
+  {
     "slug": "workspace-picker",
     "repo": "isseii10/workspace-picker.wezterm",
     "docs_path": "docs/workspace-picker.md",
     "lua_path": "lua/wezterm/types/plugins/workspace-picker.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.workspace-picker.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "v0.2.0"
     },
@@ -538,7 +608,7 @@
     "docs_path": "docs/workspacesionizer.md",
     "lua_path": "lua/wezterm/types/plugins/workspacesionizer.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.workspacesionizer.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "commit",
       "value": "b6cc1b0b8beb58c2f2d8edf73113f5a0b6379c26"
     },
@@ -551,7 +621,7 @@
     "docs_path": "docs/wsinit.md",
     "lua_path": "lua/wezterm/types/plugins/wsinit.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.wsinit.txt",
-    "tracked_ref": {
+    "reviewed_ref": {
       "kind": "release",
       "value": "1.0.0"
     },
