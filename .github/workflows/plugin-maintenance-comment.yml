@@ -52,28 +52,53 @@ jobs:
             *) echo "@$COMMENTER does not have permission to accept plugin reviews" >&2; exit 1 ;;
           esac
 
-          accept_pattern='^/accept[[:space:]]+([a-z0-9][a-z0-9-]*)([[:space:]]+commit:([[:xdigit:]]{40}))?[[:space:]]*$'
           refresh_pattern='^/refresh[[:space:]]*$'
           help_pattern='^/help[[:space:]]*$'
           action=""
-          plugin=""
-          commit=""
-          if [[ "$COMMENT_BODY" =~ $accept_pattern ]]; then
-            action="accept"
-            plugin=${BASH_REMATCH[1]}
-            commit=${BASH_REMATCH[3]:-}
-          elif [[ "$COMMENT_BODY" =~ $refresh_pattern ]]; then
+          accept_specs='[]'
+          if [[ "$COMMENT_BODY" =~ $refresh_pattern ]]; then
             action="refresh"
           elif [[ "$COMMENT_BODY" =~ $help_pattern ]]; then
             action="help"
+          elif [[ "$COMMENT_BODY" == /accept* ]]; then
+            normalized_body=${COMMENT_BODY//$'\n'/ }
+            read -r -a tokens <<< "$normalized_body"
+            [[ "${tokens[0]:-}" == "/accept" && ${#tokens[@]} -gt 1 ]] \
+              || { echo "Usage: /accept <slug> [commit:<full-sha>] [<slug> [commit:<full-sha>] ...]" >&2; exit 1; }
+
+            index=1
+            while (( index < ${#tokens[@]} )); do
+              plugin=${tokens[$index]}
+              [[ "$plugin" =~ ^[a-z0-9][a-z0-9-]*$ ]] \
+                || { echo "Invalid plugin slug: $plugin" >&2; exit 1; }
+              ((index += 1))
+
+              custom_commit=""
+              if (( index < ${#tokens[@]} )) && [[ "${tokens[$index]}" == commit:* ]]; then
+                custom_commit=${tokens[$index]#commit:}
+                [[ "$custom_commit" =~ ^[[:xdigit:]]{40}$ ]] \
+                  || { echo "Custom commits must use a full 40-character SHA" >&2; exit 1; }
+                custom_commit=${custom_commit,,}
+                ((index += 1))
+              fi
+
+              accept_specs=$(jq -c \
+                --arg plugin "$plugin" \
+                --arg custom_commit "$custom_commit" \
+                '. + [{plugin: $plugin, custom_commit: $custom_commit}]' \
+                <<< "$accept_specs")
+            done
+
+            jq -e '[.[].plugin] | length == (unique | length)' <<< "$accept_specs" >/dev/null \
+              || { echo "Each plugin may only appear once in an acceptance command" >&2; exit 1; }
+            action="accept"
           else
-            echo "Usage: /accept <slug> [commit:<full-sha>] | /refresh | /help" >&2
+            echo "Usage: /accept <slug> [commit:<full-sha>] [<slug> [commit:<full-sha>] ...] | /refresh | /help" >&2
             exit 1
           fi
 
           echo "action=$action" >> "$GITHUB_OUTPUT"
-          echo "plugin=$plugin" >> "$GITHUB_OUTPUT"
-          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "accept_specs=$accept_specs" >> "$GITHUB_OUTPUT"
 
           gh api --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -94,55 +119,63 @@ jobs:
         if: steps.command.outputs.action == 'accept'
         id: refs
         env:
-          PLUGIN: ${{ steps.command.outputs.plugin }}
-          CUSTOM_COMMIT: ${{ steps.command.outputs.commit }}
+          ACCEPT_SPECS: ${{ steps.command.outputs.accept_specs }}
         run: |
           set -euo pipefail
           report="${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json"
-          count=$(jq --arg slug "$PLUGIN" '[.plugins[] | select(.slug == $slug)] | length' "$report")
-          [[ "$count" == "1" ]] || { echo "Unknown or ambiguous plugin slug: $PLUGIN" >&2; exit 1; }
+          acceptances='[]'
 
-          status=$(jq -r --arg slug "$PLUGIN" '.plugins[] | select(.slug == $slug) | .status' "$report")
-          [[ "$status" != "error" ]] || { echo "Cannot accept $PLUGIN because upstream resolution failed" >&2; exit 1; }
+          while IFS= read -r spec; do
+            plugin=$(jq -r '.plugin' <<< "$spec")
+            custom_commit=$(jq -r '.custom_commit' <<< "$spec")
+            count=$(jq --arg slug "$plugin" '[.plugins[] | select(.slug == $slug)] | length' "$report")
+            [[ "$count" == "1" ]] || { echo "Unknown or ambiguous plugin slug: $plugin" >&2; exit 1; }
 
-          reviewed_ref=$(jq -r --arg slug "$PLUGIN" '
-            .plugins[] | select(.slug == $slug)
-            | if .reviewed_ref == null then "none" else .reviewed_ref.kind + ":" + .reviewed_ref.value end
-          ' "$report")
-          upstream_ref=$(jq -r --arg slug "$PLUGIN" '
-            .plugins[] | select(.slug == $slug)
-            | if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
-          ' "$report")
+            status=$(jq -r --arg slug "$plugin" '.plugins[] | select(.slug == $slug) | .status' "$report")
+            [[ "$status" != "error" ]] || { echo "Cannot accept $plugin because upstream resolution failed" >&2; exit 1; }
 
-          candidate_ref="$upstream_ref"
-          if [[ -n "$CUSTOM_COMMIT" ]]; then
-            [[ "$upstream_ref" == commit:* ]] \
-              || { echo "Custom commits are only supported for commit-tracked plugins" >&2; exit 1; }
-            candidate_ref="commit:${CUSTOM_COMMIT,,}"
-          fi
-          [[ "$candidate_ref" != "none" ]] || { echo "No upstream ref is available for $PLUGIN" >&2; exit 1; }
+            reviewed_ref=$(jq -r --arg slug "$plugin" '
+              .plugins[] | select(.slug == $slug)
+              | if .reviewed_ref == null then "none" else .reviewed_ref.kind + ":" + .reviewed_ref.value end
+            ' "$report")
+            upstream_ref=$(jq -r --arg slug "$plugin" '
+              .plugins[] | select(.slug == $slug)
+              | if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
+            ' "$report")
 
-          echo "reviewed_ref=$reviewed_ref" >> "$GITHUB_OUTPUT"
-          echo "candidate_ref=$candidate_ref" >> "$GITHUB_OUTPUT"
+            candidate_ref="$upstream_ref"
+            if [[ -n "$custom_commit" ]]; then
+              [[ "$upstream_ref" == commit:* ]] \
+                || { echo "Custom commits are only supported for commit-tracked plugins" >&2; exit 1; }
+              candidate_ref="commit:$custom_commit"
+            fi
+            [[ "$candidate_ref" != "none" ]] || { echo "No upstream ref is available for $plugin" >&2; exit 1; }
+
+            acceptances=$(jq -c \
+              --arg plugin "$plugin" \
+              --arg expected_reviewed_ref "$reviewed_ref" \
+              --arg candidate_ref "$candidate_ref" \
+              '. + [{plugin: $plugin, expected_reviewed_ref: $expected_reviewed_ref, candidate_ref: $candidate_ref}]' \
+              <<< "$acceptances")
+          done < <(jq -c '.[]' <<< "$ACCEPT_SPECS")
+
+          echo "acceptances=$acceptances" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch acceptance workflow
         if: steps.command.outputs.action == 'accept'
         env:
-          PLUGIN: ${{ steps.command.outputs.plugin }}
-          REVIEWED_REF: ${{ steps.refs.outputs.reviewed_ref }}
-          CANDIDATE_REF: ${{ steps.refs.outputs.candidate_ref }}
+          ACCEPTANCES: ${{ steps.refs.outputs.acceptances }}
         run: |
           set -euo pipefail
           gh workflow run plugin-maintenance-accept.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref "$DEFAULT_BRANCH" \
-            -f plugin="$PLUGIN" \
-            -f expected_reviewed_ref="$REVIEWED_REF" \
-            -f candidate_ref="$CANDIDATE_REF"
+            -f acceptances="$ACCEPTANCES"
 
+          selection=$(jq -r 'map("`" + .plugin + "` at `" + .candidate_ref + "`") | join(", ")' <<< "$ACCEPTANCES")
           workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance-accept.yml"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
-            "Acceptance requested for \`$PLUGIN\` at \`$CANDIDATE_REF\`. [Track the acceptance workflow]($workflow_url)."
+            "Acceptance requested for $selection in one PR. [Track the acceptance workflow]($workflow_url)."
 
       - name: Dispatch maintenance refresh
         if: steps.command.outputs.action == 'refresh'
@@ -166,6 +199,7 @@ jobs:
 
           - `/accept <slug>` — accept the latest upstream ref for a plugin.
           - `/accept <slug> commit:<full-sha>` — accept a specific intermediate commit for a commit-tracked plugin.
+          - `/accept <slug> [commit:<full-sha>] <slug> [commit:<full-sha>] ...` — accept multiple plugins in one PR.
           - `/refresh` — refresh upstream state, publish the dashboard, and update this digest.
           - `/help` — show this command reference.
 

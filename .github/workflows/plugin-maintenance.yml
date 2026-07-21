@@ -205,7 +205,8 @@ jobs:
               "",
               "[Open the maintenance dashboard](\($dashboard))",
               "",
-              "To accept a reviewed ref, copy one of the commands below into a new comment on this issue.",
+              "To accept reviewed refs, copy one command below or combine multiple plugin selections in one comment.",
+              "Use `/accept slug-one slug-two` for latest refs. A `commit:<full-sha>` applies to the slug immediately before it.",
               "Comment `/refresh` to regenerate this report or `/help` to list every command.",
               "",
               (

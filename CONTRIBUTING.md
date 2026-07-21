@@ -134,9 +134,12 @@ maintenance review pages.
 baseline unchanged while functional work remains outstanding. When the upstream change can be
 accepted, copy `/accept <slug>` from the rolling maintenance issue into a new comment. For a
 commit-tracked plugin, use `/accept <slug> commit:<full-sha>` to accept an intermediate commit.
+Combine selections as `/accept <slug> [commit:<full-sha>] <slug> [commit:<full-sha>] ...` to
+accept multiple plugins in a single PR. Each optional commit applies to the slug immediately before
+it.
 The comment workflow refreshes the upstream report, verifies the commenter has write access, and
 dispatches `plugin-maintenance-accept.yml`. The acceptance workflow validates the reviewed and
-candidate refs, then opens a PR containing only the manifest and generated README changes.
+candidate refs, then opens one PR containing all selected manifest and generated README changes.
 Comment `/refresh` to run maintenance immediately, including the dashboard and rolling digest, or
 `/help` to print the complete command reference in the issue.
 

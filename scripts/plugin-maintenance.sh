@@ -875,16 +875,6 @@ render_pages() {
   plugin_rows=$(jq -r --arg repo_slug "$repo_slug_value" --arg repo_branch "$repo_branch_value" '
     .plugins[]
     | (
-      if .reviewed_ref == null then
-        "none"
-      else
-        .reviewed_ref.kind + ":" + .reviewed_ref.value
-      end
-    ) as $reviewed_arg
-    | (
-      if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
-    ) as $candidate_arg
-    | (
       if .upstream_ref then
         if .upstream_ref.kind == "commit" then
           (.upstream_ref.kind + ":" + .upstream_ref.value[0:7])
@@ -916,11 +906,7 @@ render_pages() {
       end
     ) as $upstream_url
     | (
-      "gh workflow run plugin-maintenance-accept.yml"
-      + " --repo " + ($repo_slug | @sh)
-      + " -f plugin=" + (.slug | @sh)
-      + " -f expected_reviewed_ref=" + ($reviewed_arg | @sh)
-      + " -f candidate_ref=" + ($candidate_arg | @sh)
+      "/accept " + .slug
     ) as $accept_command
     | (
       if .status == "review_required" then
