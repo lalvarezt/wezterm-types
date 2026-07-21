@@ -19,8 +19,8 @@
     "lua_path": "lua/wezterm/types/plugins/ai-commander.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.ai-commander.txt",
     "reviewed_ref": {
-      "kind": "commit",
-      "value": "8b063e4a89f5057851649a1fd868b83e4b9f74a8"
+      "kind": "release",
+      "value": "v0.0.2"
     },
     "display_name": "ai-commander.wezterm",
     "readme_name": "ai-commander.wezterm"
@@ -83,7 +83,10 @@
     "docs_path": "docs/chord.md",
     "lua_path": "lua/wezterm/types/plugins/chord.lua",
     "vimdoc_path": "doc/wezterm-types-plugin.chord.txt",
-    "reviewed_ref": null,
+    "reviewed_ref": {
+      "kind": "release",
+      "value": "1.1.0"
+    },
     "display_name": "chord.wz",
     "readme_name": "chord.wz"
   },
@@ -121,7 +124,7 @@
     "vimdoc_path": "doc/wezterm-types-plugin.dev.txt",
     "reviewed_ref": {
       "kind": "commit",
-      "value": "1b5d9e06a084b6ee8382636137a37c77c221df27"
+      "value": "40dea555a1112e1d353a61646647c739a3ce112f"
     },
     "display_name": "dev.wezterm",
     "readme_name": "dev.wezterm"
