@@ -896,8 +896,7 @@ render_pages() {
       if .status == "review_required" or .status == "unreviewed" then
         "<div class=\"review-actions\">"
         + $review_link
-        + "<button type=\"button\" class=\"copy-command\" data-command=\"" + ($accept_command | @html) + "\">Copy acceptance command</button>"
-        + "<a href=\"https://github.com/" + ($repo_slug | @html) + "/actions/workflows/plugin-maintenance-accept.yml\">Open acceptance workflow ↗</a>"
+        + "<button type=\"button\" class=\"copy-command\" data-command=\"" + ($accept_command | @html) + "\">Copy command</button>"
         + "</div>"
       else
         ""

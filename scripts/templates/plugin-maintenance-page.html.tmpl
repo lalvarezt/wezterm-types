@@ -27,7 +27,7 @@
       color: var(--ink);
     }
     main {
-      max-width: 1200px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 48px 20px 72px;
     }
@@ -114,17 +114,20 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 8px;
-      min-width: 190px;
+      min-width: 0;
     }
     .copy-command {
       appearance: none;
       border: 1px solid var(--accent);
       border-radius: 7px;
-      padding: 0.42rem 0.65rem;
+      max-width: 100%;
+      padding: 0.34rem 0.52rem;
       color: var(--accent);
       background: transparent;
       font: inherit;
-      font-size: 0.88rem;
+      font-size: 0.82rem;
+      line-height: 1.2;
+      white-space: normal;
       cursor: pointer;
     }
     .copy-command:hover,
