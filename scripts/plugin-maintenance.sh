@@ -157,20 +157,9 @@ reviewed_ref_text() {
   printf '%s:%s\n' "$kind" "$value"
 }
 
-dash_line() {
-  local width=$1
-
-  printf '%*s' "$width" '' | tr ' ' '-'
-}
-
 render_table_block() {
-  local -a plugin_cells=() docs_cells=() help_cells=() status_cells=()
-  local plugin_width docs_width help_width status_width
-
-  plugin_width=6
-  docs_width=13
-  help_width=11
-  status_width=6
+  printf '| Plugin | Documentation | Neovim Help | Status |\n'
+  printf '| --- | --- | --- | --- |\n'
 
   while IFS=$'\t' read -r slug readme_name repo docs_path vimdoc_path reviewed_kind reviewed_value; do
     local plugin_cell docs_cell help_cell status_cell reviewed_text
@@ -180,15 +169,8 @@ render_table_block() {
     reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
     status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br><code>${reviewed_text}</code>"
 
-    plugin_cells+=("$plugin_cell")
-    docs_cells+=("$docs_cell")
-    help_cells+=("$help_cell")
-    status_cells+=("$status_cell")
-
-    (( ${#plugin_cell} > plugin_width )) && plugin_width=${#plugin_cell}
-    (( ${#docs_cell} > docs_width )) && docs_width=${#docs_cell}
-    (( ${#help_cell} > help_width )) && help_width=${#help_cell}
-    (( ${#status_cell} > status_width )) && status_width=${#status_cell}
+    printf '| %s | %s | %s | %s |\n' \
+      "$plugin_cell" "$docs_cell" "$help_cell" "$status_cell"
   done < <(
     jq -r '
       sort_by(.readme_name | ascii_downcase)
@@ -205,25 +187,6 @@ render_table_block() {
       | @tsv
     ' "$MANIFEST_PATH"
   )
-
-  printf '| %-*s | %-*s | %-*s | %-*s |\n' \
-    "$plugin_width" "Plugin" \
-    "$docs_width" "Documentation" \
-    "$help_width" "Neovim Help" \
-    "$status_width" "Status"
-  printf '|%s|%s|%s|%s|\n' \
-    "$(dash_line $((plugin_width + 2)))" \
-    "$(dash_line $((docs_width + 2)))" \
-    "$(dash_line $((help_width + 2)))" \
-    "$(dash_line $((status_width + 2)))"
-
-  for i in "${!plugin_cells[@]}"; do
-    printf '| %-*s | %-*s | %-*s | %-*s |\n' \
-      "$plugin_width" "${plugin_cells[$i]}" \
-      "$docs_width" "${docs_cells[$i]}" \
-      "$help_width" "${help_cells[$i]}" \
-      "$status_width" "${status_cells[$i]}"
-  done
 }
 
 rewrite_readme_with_table() {
