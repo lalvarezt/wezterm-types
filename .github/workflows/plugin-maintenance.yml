@@ -233,20 +233,23 @@ jobs:
           ' "$report" > "$body"
 
           outstanding=$(jq '[.plugins[] | select(.status != "reviewed")] | length' "$report")
-          gh label create plugin-maintenance --color D4A72C --description "Automated plugin upstream review" --force
+          gh label create plugin-maintenance --repo "$GITHUB_REPOSITORY" \
+            --color D4A72C --description "Automated plugin upstream review" --force
 
-          issue_json=$(gh issue list --state all --label plugin-maintenance --limit 100 --json number,title,state \
+          issue_json=$(gh issue list --repo "$GITHUB_REPOSITORY" \
+            --state all --label plugin-maintenance --limit 100 --json number,title,state \
             --jq '[.[] | select(.title == env.DIGEST_TITLE)][0] // {}')
           issue_number=$(jq -r '.number // empty' <<< "$issue_json")
           issue_state=$(jq -r '.state // empty' <<< "$issue_json")
 
           if (( outstanding > 0 )); then
             if [[ -z "$issue_number" ]]; then
-              gh issue create --title "$DIGEST_TITLE" --label plugin-maintenance --body-file "$body"
+              gh issue create --repo "$GITHUB_REPOSITORY" \
+                --title "$DIGEST_TITLE" --label plugin-maintenance --body-file "$body"
             else
-              gh issue edit "$issue_number" --body-file "$body"
+              gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body"
               if [[ "$issue_state" == "CLOSED" ]]; then
-                gh issue reopen "$issue_number"
+                gh issue reopen "$issue_number" --repo "$GITHUB_REPOSITORY"
               fi
             fi
           elif [[ -n "$issue_number" ]]; then
@@ -256,9 +259,9 @@ jobs:
               echo
               echo "No upstream changes require review as of \`$(jq -r '.checked_at' "$report")\`."
             } > "$body"
-            gh issue edit "$issue_number" --body-file "$body"
+            gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body"
             if [[ "$issue_state" == "OPEN" ]]; then
-              gh issue close "$issue_number"
+              gh issue close "$issue_number" --repo "$GITHUB_REPOSITORY"
             fi
           fi
 
