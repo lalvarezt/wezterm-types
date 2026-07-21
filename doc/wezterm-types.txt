@@ -76,9 +76,9 @@ This project also features type annotations for various WezTerm plugins.
 
 **If you want to add your plugin, please read CONTRIBUTING.md.**
 
-  -------------------------------------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------------------------------------------------------
   Plugin                             Documentation                      Neovim Help                                         Status
-  ---------------------------------- ---------------------------------- --------------------------------------------------- -----------------------------------
+  ---------------------------------- ---------------------------------- --------------------------------------------------- ------------------------
   ai-commander.wezterm               docs/ai-commander.md               :h wezterm-types-plugin.ai-commander.txt            [status]commit:8b063e4
 
   ai-helper.wezterm                  docs/ai-helper.md                  :h wezterm-types-plugin.ai-helper.txt               [status]commit:68ce596
@@ -179,7 +179,7 @@ This project also features type annotations for various WezTerm plugins.
   workspacesionizer.wezterm          docs/workspacesionizer.md          :h wezterm-types-plugin.workspacesionizer.txt       [status]commit:b6cc1b0
 
   wsinit.wezterm                     docs/wsinit.md                     :h wezterm-types-plugin.wsinit.txt                  [status]release:1.0.0
-  -------------------------------------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 
 USAGE                                                    *wezterm-types-usage*
