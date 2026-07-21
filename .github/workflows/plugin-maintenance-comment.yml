@@ -183,7 +183,8 @@ jobs:
           set -euo pipefail
           gh workflow run plugin-maintenance.yml \
             --repo "$GITHUB_REPOSITORY" \
-            --ref "$DEFAULT_BRANCH"
+            --ref "$DEFAULT_BRANCH" \
+            -f comment_id="$COMMENT_ID"
 
           workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance.yml"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
