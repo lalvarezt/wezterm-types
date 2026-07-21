@@ -1,0 +1,138 @@
+name: Accept Plugin Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: Plugin slug shown on the maintenance dashboard
+        required: true
+        type: string
+      expected_reviewed_ref:
+        description: Current reviewed ref (none or kind:value)
+        required: true
+        type: string
+      candidate_ref:
+        description: Upstream ref that was reviewed (kind:value)
+        required: true
+        type: string
+
+concurrency:
+  group: plugin-maintenance-accept-${{ inputs.plugin }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PLUGIN: ${{ inputs.plugin }}
+      EXPECTED_REVIEWED_REF: ${{ inputs.expected_reviewed_ref }}
+      CANDIDATE_REF: ${{ inputs.candidate_ref }}
+      PLUGIN_MAINTENANCE_BUILD_DIR: .tmp/plugin-maintenance
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          [[ "$PLUGIN" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "Invalid plugin slug: $PLUGIN" >&2; exit 1; }
+          [[ "$EXPECTED_REVIEWED_REF" == "none" || "$EXPECTED_REVIEWED_REF" =~ ^(release|tag|commit):[^:]+$ ]] \
+            || { echo "Invalid expected reviewed ref: $EXPECTED_REVIEWED_REF" >&2; exit 1; }
+          [[ "$CANDIDATE_REF" =~ ^(release|tag|commit):[^:]+$ ]] \
+            || { echo "Invalid candidate ref: $CANDIDATE_REF" >&2; exit 1; }
+
+      - name: Refresh upstream report
+        run: ./scripts/plugin-maintenance.sh sync
+
+      - name: Record reviewed baseline
+        id: update
+        run: |
+          set -euo pipefail
+          ./scripts/plugin-maintenance.sh accept "$PLUGIN" \
+            --from "$EXPECTED_REVIEWED_REF" \
+            --to "$CANDIDATE_REF"
+          ./scripts/plugin-maintenance.sh validate
+
+          if git diff --quiet -- metadata/plugins.json README.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "$PLUGIN is already reviewed at $CANDIDATE_REF." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare PR metadata
+        if: steps.update.outputs.changed == 'true'
+        id: pr
+        run: |
+          set -euo pipefail
+          fingerprint=$(printf '%s' "$CANDIDATE_REF" | sha256sum | cut -c1-12)
+          branch="plugin-maintenance/accept-${PLUGIN}-${fingerprint}"
+          existing_pr=$(gh pr list --state open --head "$branch" --json url --jq '.[0].url // empty')
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "existing_pr=$existing_pr" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "$existing_pr" ]]; then
+            echo "Acceptance PR already exists: $existing_pr" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit reviewed baseline
+        if: steps.update.outputs.changed == 'true' && steps.pr.outputs.existing_pr == ''
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git switch -c "${{ steps.pr.outputs.branch }}"
+          git add metadata/plugins.json README.md
+
+          changed_files=$(git diff --cached --name-only)
+          [[ "$changed_files" == $'README.md\nmetadata/plugins.json' || "$changed_files" == $'metadata/plugins.json\nREADME.md' ]] \
+            || { echo "Unexpected files in acceptance commit:" >&2; printf '%s\n' "$changed_files" >&2; exit 1; }
+
+          git commit -m "chore(${PLUGIN}): record reviewed upstream ${CANDIDATE_REF}"
+          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+
+      - name: Open acceptance PR
+        if: steps.update.outputs.changed == 'true' && steps.pr.outputs.existing_pr == ''
+        env:
+          BRANCH: ${{ steps.pr.outputs.branch }}
+        run: |
+          set -euo pipefail
+          report="${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json"
+          dashboard=$(jq -r --arg slug "$PLUGIN" '.pages_base_url + "/plugin-maintenance/#" + $slug' "$report")
+          review_url=$(jq -r --arg slug "$PLUGIN" '
+            .plugins[] | select(.slug == $slug)
+            | if .compare_url then .compare_url
+              elif .upstream_ref.kind == "commit" then .repo_url + "/commit/" + .upstream_ref.value
+              elif .upstream_ref.kind == "release" then .repo_url + "/releases/tag/" + .upstream_ref.value
+              else .repo_url + "/tree/" + .upstream_ref.value
+              end
+          ' "$report")
+          body=$(mktemp)
+          {
+            echo "Records a deliberately reviewed upstream baseline for \`$PLUGIN\`."
+            echo
+            echo "- Previous reviewed ref: \`$EXPECTED_REVIEWED_REF\`"
+            echo "- Accepted upstream ref: \`$CANDIDATE_REF\`"
+            echo "- [Reviewed upstream change]($review_url)"
+            echo "- [Maintenance dashboard]($dashboard)"
+            echo "- [Acceptance workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+            echo
+            echo "This PR does not claim annotation coverage and does not modify annotation files."
+          } > "$body"
+
+          gh label create plugin-maintenance --color D4A72C --description "Automated plugin upstream review" --force
+          pr_url=$(gh pr create \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$BRANCH" \
+            --title "chore(${PLUGIN}): record reviewed upstream ${CANDIDATE_REF}" \
+            --label plugin-maintenance \
+            --body-file "$body")
+          echo "Created acceptance PR: $pr_url" >> "$GITHUB_STEP_SUMMARY"
