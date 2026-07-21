@@ -1,5 +1,7 @@
 name: Accept Plugin Review
 
+run-name: Accept ${{ inputs.plugin }} at ${{ inputs.candidate_ref }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -107,14 +109,20 @@ jobs:
           set -euo pipefail
           report="${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json"
           dashboard=$(jq -r --arg slug "$PLUGIN" '.pages_base_url + "/plugin-maintenance/#" + $slug' "$report")
-          review_url=$(jq -r --arg slug "$PLUGIN" '
-            .plugins[] | select(.slug == $slug)
-            | if .compare_url then .compare_url
-              elif .upstream_ref.kind == "commit" then .repo_url + "/commit/" + .upstream_ref.value
-              elif .upstream_ref.kind == "release" then .repo_url + "/releases/tag/" + .upstream_ref.value
-              else .repo_url + "/tree/" + .upstream_ref.value
-              end
-          ' "$report")
+          repo_url=$(jq -r --arg slug "$PLUGIN" '.plugins[] | select(.slug == $slug) | .repo_url' "$report")
+          candidate_kind=${CANDIDATE_REF%%:*}
+          candidate_value=${CANDIDATE_REF#*:}
+          case "$candidate_kind" in
+            commit)
+              if [[ "$EXPECTED_REVIEWED_REF" == commit:* ]]; then
+                review_url="$repo_url/compare/${EXPECTED_REVIEWED_REF#*:}...$candidate_value"
+              else
+                review_url="$repo_url/commit/$candidate_value"
+              fi
+              ;;
+            release) review_url="$repo_url/releases/tag/$candidate_value" ;;
+            tag) review_url="$repo_url/tree/$candidate_value" ;;
+          esac
           body=$(mktemp)
           {
             echo "Records a deliberately reviewed upstream baseline for \`$PLUGIN\`."

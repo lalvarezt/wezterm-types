@@ -131,10 +131,14 @@ maintenance review pages.
    ```
 
 8. For each plugin marked `review_required` or `unreviewed`, inspect the upstream change. Leave its
-   baseline unchanged while functional work remains outstanding. When the upstream change can be
-   accepted, use the exact command shown on the maintenance dashboard to dispatch
-   `plugin-maintenance-accept.yml`. The workflow validates the reviewed and candidate refs, then
-   opens a PR containing only the manifest and generated README changes.
+baseline unchanged while functional work remains outstanding. When the upstream change can be
+accepted, copy `/accept <slug>` from the rolling maintenance issue into a new comment. For a
+commit-tracked plugin, use `/accept <slug> commit:<full-sha>` to accept an intermediate commit.
+The comment workflow refreshes the upstream report, verifies the commenter has write access, and
+dispatches `plugin-maintenance-accept.yml`. The acceptance workflow validates the reviewed and
+candidate refs, then opens a PR containing only the manifest and generated README changes.
+Comment `/refresh` to run maintenance immediately, including the dashboard and rolling digest, or
+`/help` to print the complete command reference in the issue.
 
    The equivalent local command, using an existing fresh report, is:
    ```bash

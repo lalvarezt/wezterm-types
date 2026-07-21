@@ -195,8 +195,7 @@ jobs:
               elif .upstream_ref.kind == "release" then .repo_url + "/releases/tag/" + .upstream_ref.value
               else .repo_url + "/tree/" + .upstream_ref.value
               end;
-            .repo_slug as $repo_slug
-            | (.pages_base_url + "/plugin-maintenance/") as $dashboard
+            (.pages_base_url + "/plugin-maintenance/") as $dashboard
             | "<!-- plugin-maintenance-digest -->",
               "# Plugin maintenance: upstream changes to review",
               "",
@@ -205,6 +204,9 @@ jobs:
               "Reviewed: **\(.summary.reviewed)** · Review required: **\(.summary.review_required)** · Unreviewed: **\(.summary.unreviewed)** · Errors: **\(.summary.error)**",
               "",
               "[Open the maintenance dashboard](\($dashboard))",
+              "",
+              "To accept a reviewed ref, copy one of the commands below into a new comment on this issue.",
+              "Comment `/refresh` to regenerate this report or `/help` to list every command.",
               "",
               (
                 .plugins[]
@@ -223,9 +225,18 @@ jobs:
                   (
                     if .status == "review_required" or .status == "unreviewed" then
                       "",
-                      "```bash",
-                      "gh workflow run plugin-maintenance-accept.yml --repo \($repo_slug) -f plugin=\(.slug | @sh) -f expected_reviewed_ref=\(ref_text(.reviewed_ref) | @sh) -f candidate_ref=\(ref_text(.upstream_ref) | @sh)",
-                      "```"
+                      "Accept latest upstream:",
+                      "```text",
+                      "/accept \(.slug)",
+                      "```",
+                      (
+                        if .upstream_ref.kind == "commit" then
+                          "Accept a specific commit (replace the SHA):",
+                          "```text",
+                          "/accept \(.slug) commit:\(.upstream_ref.value)",
+                          "```"
+                        else empty end
+                      )
                     else empty end
                   ),
                   ""

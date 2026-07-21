@@ -634,6 +634,7 @@ accept() {
   local slug=${1:-}
   local from_arg="" to_arg=""
   local from_kind from_value to_kind to_value manifest_count current_ref report_count report_status report_ref
+  local report_kind report_value repo candidate_sha baseline_sha comparison merge_base_sha
   local tmp manifest_backup readme_backup
 
   [[ -n "$slug" ]] || die "$(accept_usage)"
@@ -690,7 +691,45 @@ accept() {
     .plugins[] | select(.slug == $slug)
     | if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
   ' "$SYNC_PATH")
-  [[ "$report_ref" == "$to_arg" ]] || die "Stale upstream candidate for $slug: expected $to_arg, report contains $report_ref"
+
+  if [[ "$report_ref" != "$to_arg" ]]; then
+    report_kind=${report_ref%%:*}
+    report_value=${report_ref#*:}
+    [[ "$to_kind" == "commit" && "$report_kind" == "commit" ]] \
+      || die "Custom acceptance refs are only supported for commit-tracked plugins"
+    [[ "$to_value" =~ ^[[:xdigit:]]{40}$ ]] \
+      || die "Custom commit refs must use a full 40-character SHA"
+
+    require_cmd gh
+    repo=$(jq -r --arg slug "$slug" '.plugins[] | select(.slug == $slug) | .repo' "$SYNC_PATH")
+    [[ "$repo" =~ ^[^/]+/[^/]+$ ]] || die "Invalid upstream repository for $slug: $repo"
+
+    candidate_sha=$(gh api "repos/$repo/commits/$to_value" --jq '.sha') \
+      || die "Cannot resolve candidate commit $to_value for $slug"
+    candidate_sha=${candidate_sha,,}
+    to_value=${to_value,,}
+    [[ "$candidate_sha" == "$to_value" ]] || die "Candidate commit did not resolve exactly: $to_value"
+
+    comparison=$(gh api "repos/$repo/compare/$candidate_sha...$report_value") \
+      || die "Cannot compare candidate $candidate_sha with upstream $report_value"
+    merge_base_sha=$(jq -r '.merge_base_commit.sha' <<<"$comparison")
+    [[ "$merge_base_sha" == "$candidate_sha" ]] \
+      || die "Candidate commit $candidate_sha is not an ancestor of upstream $report_value"
+
+    if [[ "$current_ref" != "none" ]]; then
+      [[ "$from_kind" == "commit" ]] \
+        || die "Cannot accept an intermediate commit from a non-commit baseline"
+      baseline_sha=$(gh api "repos/$repo/commits/$from_value" --jq '.sha') \
+        || die "Cannot resolve reviewed baseline $from_value for $slug"
+      comparison=$(gh api "repos/$repo/compare/$baseline_sha...$candidate_sha") \
+        || die "Cannot compare reviewed baseline $baseline_sha with candidate $candidate_sha"
+      merge_base_sha=$(jq -r '.merge_base_commit.sha' <<<"$comparison")
+      [[ "$merge_base_sha" == "$baseline_sha" ]] \
+        || die "Candidate commit $candidate_sha is not newer than reviewed baseline $baseline_sha"
+    fi
+
+    to_arg="commit:$candidate_sha"
+  fi
 
   tmp=$(mktemp)
   manifest_backup=$(mktemp)

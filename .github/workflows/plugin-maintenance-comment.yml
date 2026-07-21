@@ -1,0 +1,174 @@
+name: Accept Plugin Review Comment
+
+run-name: Accept command from @${{ github.actor }}
+
+on:
+  issue_comment:
+    types:
+      - created
+
+concurrency:
+  group: plugin-maintenance-comment-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+jobs:
+  dispatch-acceptance:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.issue.title == 'Plugin maintenance: upstream changes to review' &&
+      contains(github.event.issue.labels.*.name, 'plugin-maintenance') &&
+      (startsWith(github.event.comment.body, '/accept') ||
+       startsWith(github.event.comment.body, '/refresh') ||
+       startsWith(github.event.comment.body, '/help'))
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+      COMMENTER: ${{ github.event.comment.user.login }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      PLUGIN_MAINTENANCE_BUILD_DIR: .tmp/plugin-maintenance
+    steps:
+      - name: Validate command context and author
+        id: command
+        run: |
+          set -euo pipefail
+
+          [[ "$ISSUE_TITLE" == "Plugin maintenance: upstream changes to review" ]] \
+            || { echo "Commands are only accepted on the maintenance digest issue" >&2; exit 1; }
+          jq -e '.issue.labels | any(.name == "plugin-maintenance")' "$GITHUB_EVENT_PATH" >/dev/null \
+            || { echo "Maintenance digest label is missing" >&2; exit 1; }
+
+          permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$COMMENTER/permission" --jq '.permission')
+          case "$permission" in
+            admin | maintain | write) ;;
+            *) echo "@$COMMENTER does not have permission to accept plugin reviews" >&2; exit 1 ;;
+          esac
+
+          accept_pattern='^/accept[[:space:]]+([a-z0-9][a-z0-9-]*)([[:space:]]+commit:([[:xdigit:]]{40}))?[[:space:]]*$'
+          refresh_pattern='^/refresh[[:space:]]*$'
+          help_pattern='^/help[[:space:]]*$'
+          action=""
+          plugin=""
+          commit=""
+          if [[ "$COMMENT_BODY" =~ $accept_pattern ]]; then
+            action="accept"
+            plugin=${BASH_REMATCH[1]}
+            commit=${BASH_REMATCH[3]:-}
+          elif [[ "$COMMENT_BODY" =~ $refresh_pattern ]]; then
+            action="refresh"
+          elif [[ "$COMMENT_BODY" =~ $help_pattern ]]; then
+            action="help"
+          else
+            echo "Usage: /accept <slug> [commit:<full-sha>] | /refresh | /help" >&2
+            exit 1
+          fi
+
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "plugin=$plugin" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" \
+            -f content=eyes >/dev/null
+
+      - name: Checkout default branch
+        if: steps.command.outputs.action == 'accept'
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Refresh upstream report
+        if: steps.command.outputs.action == 'accept'
+        run: ./scripts/plugin-maintenance.sh sync
+
+      - name: Resolve acceptance inputs
+        if: steps.command.outputs.action == 'accept'
+        id: refs
+        env:
+          PLUGIN: ${{ steps.command.outputs.plugin }}
+          CUSTOM_COMMIT: ${{ steps.command.outputs.commit }}
+        run: |
+          set -euo pipefail
+          report="${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json"
+          count=$(jq --arg slug "$PLUGIN" '[.plugins[] | select(.slug == $slug)] | length' "$report")
+          [[ "$count" == "1" ]] || { echo "Unknown or ambiguous plugin slug: $PLUGIN" >&2; exit 1; }
+
+          status=$(jq -r --arg slug "$PLUGIN" '.plugins[] | select(.slug == $slug) | .status' "$report")
+          [[ "$status" != "error" ]] || { echo "Cannot accept $PLUGIN because upstream resolution failed" >&2; exit 1; }
+
+          reviewed_ref=$(jq -r --arg slug "$PLUGIN" '
+            .plugins[] | select(.slug == $slug)
+            | if .reviewed_ref == null then "none" else .reviewed_ref.kind + ":" + .reviewed_ref.value end
+          ' "$report")
+          upstream_ref=$(jq -r --arg slug "$PLUGIN" '
+            .plugins[] | select(.slug == $slug)
+            | if .upstream_ref == null then "none" else .upstream_ref.kind + ":" + .upstream_ref.value end
+          ' "$report")
+
+          candidate_ref="$upstream_ref"
+          if [[ -n "$CUSTOM_COMMIT" ]]; then
+            [[ "$upstream_ref" == commit:* ]] \
+              || { echo "Custom commits are only supported for commit-tracked plugins" >&2; exit 1; }
+            candidate_ref="commit:${CUSTOM_COMMIT,,}"
+          fi
+          [[ "$candidate_ref" != "none" ]] || { echo "No upstream ref is available for $PLUGIN" >&2; exit 1; }
+
+          echo "reviewed_ref=$reviewed_ref" >> "$GITHUB_OUTPUT"
+          echo "candidate_ref=$candidate_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch acceptance workflow
+        if: steps.command.outputs.action == 'accept'
+        env:
+          PLUGIN: ${{ steps.command.outputs.plugin }}
+          REVIEWED_REF: ${{ steps.refs.outputs.reviewed_ref }}
+          CANDIDATE_REF: ${{ steps.refs.outputs.candidate_ref }}
+        run: |
+          set -euo pipefail
+          gh workflow run plugin-maintenance-accept.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$DEFAULT_BRANCH" \
+            -f plugin="$PLUGIN" \
+            -f expected_reviewed_ref="$REVIEWED_REF" \
+            -f candidate_ref="$CANDIDATE_REF"
+
+          workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance-accept.yml"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
+            "Acceptance requested for \`$PLUGIN\` at \`$CANDIDATE_REF\`. [Track the acceptance workflow]($workflow_url)."
+
+      - name: Dispatch maintenance refresh
+        if: steps.command.outputs.action == 'refresh'
+        run: |
+          set -euo pipefail
+          gh workflow run plugin-maintenance.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$DEFAULT_BRANCH"
+
+          workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance.yml"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
+            "Maintenance refresh requested. [Track the maintenance workflow]($workflow_url)."
+
+      - name: Show command help
+        if: steps.command.outputs.action == 'help'
+        run: |
+          set -euo pipefail
+          body=$(mktemp)
+          cat > "$body" <<'EOF'
+          ## Plugin maintenance commands
+
+          - `/accept <slug>` — accept the latest upstream ref for a plugin.
+          - `/accept <slug> commit:<full-sha>` — accept a specific intermediate commit for a commit-tracked plugin.
+          - `/refresh` — refresh upstream state, publish the dashboard, and update this digest.
+          - `/help` — show this command reference.
+
+          Commands must be the only content in a comment. Acceptance commands create a PR; they do not modify annotation files directly.
+          EOF
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$body"
