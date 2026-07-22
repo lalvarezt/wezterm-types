@@ -62,6 +62,7 @@ jobs:
           fi
 
   build-report:
+    # Pull requests stop after validation; report generation and publication are non-PR concerns.
     if: github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
@@ -124,14 +125,11 @@ jobs:
             if curl --fail --silent --show-error --location "$SIGNATURE_URL" -o "$remote_signature" \
               && cmp -s "$local_signature" "$remote_signature"; then
               should_publish=false
+              echo "The generated maintenance site matches the published content; skipping this push-triggered deployment." >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
 
           echo "should_publish=${should_publish}" >> "$GITHUB_OUTPUT"
-
-          if [[ "$should_publish" == "false" ]]; then
-            echo "The generated maintenance site matches the published content; skipping this push-triggered deployment." >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: Write workflow summary
         run: |
