@@ -14,6 +14,7 @@ SYNC_PATH="${PLUGIN_MAINTENANCE_SYNC_PATH:-$BUILD_DIR/report.json}"
 PAGES_DIR="${PLUGIN_MAINTENANCE_PAGES_DIR:-$BUILD_DIR/pages}"
 START_MARKER="<!-- plugin-table:start -->"
 END_MARKER="<!-- plugin-table:end -->"
+CURRENT_BADGE_VERSION=1
 TEMP_FILES=()
 TEMP_PATH=""
 
@@ -162,28 +163,28 @@ reviewed_ref_text() {
   printf '%s\n' "$value"
 }
 
-reviewed_ref_badge_url() {
-  local reviewed_text=$1
-  local encoded
+current_badge_url() {
+  local slug=$1
+  local endpoint encoded
 
-  encoded=$(jq -rn --arg value "$reviewed_text" '$value | @uri')
-  printf 'https://img.shields.io/static/v1?label=current&message=%s&color=blue\n' "$encoded"
+  endpoint="$(pages_base_url)/plugin-maintenance/badges/${slug}-current.json?v=${CURRENT_BADGE_VERSION}"
+  encoded=$(jq -rn --arg value "$endpoint" '$value | @uri')
+  printf 'https://img.shields.io/endpoint?url=%s\n' "$encoded"
 }
 
 render_table_block() {
   printf '| Plugin | Documentation | Neovim Help | &nbsp;Status&nbsp;/&nbsp;Current&nbsp; |\n'
   printf '| --- | --- | --- | --- |\n'
 
-  while IFS=$'\t' read -r slug readme_name repo reviewed_kind reviewed_value; do
-    local plugin_cell docs_cell help_cell status_cell reviewed_text reviewed_badge_url
+  while IFS=$'\t' read -r slug readme_name repo; do
+    local plugin_cell docs_cell help_cell status_cell current_url
     local docs_path="docs/${slug}.md"
     local vimdoc_path="doc/wezterm-types-plugin.${slug}.txt"
     plugin_cell="[$readme_name](https://github.com/$repo)"
     docs_cell="[$docs_path](./$docs_path)"
     help_cell="[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
-    reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
-    reviewed_badge_url=$(reviewed_ref_badge_url "$reviewed_text")
-    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br>![Current](${reviewed_badge_url})"
+    current_url=$(current_badge_url "$slug")
+    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br>![Current](${current_url})"
 
     printf '| %s | %s | %s | %s |\n' \
       "$plugin_cell" "$docs_cell" "$help_cell" "$status_cell"
@@ -194,9 +195,7 @@ render_table_block() {
       | [
           .slug,
           .readme_name,
-          .repo,
-          (.reviewed_ref.kind // "none"),
-          (.reviewed_ref.value // "")
+          .repo
         ]
       | @tsv
     ' "$MANIFEST_PATH"
@@ -823,9 +822,12 @@ render_pages() {
   cp "$report_path" "$PAGES_DIR/plugin-maintenance/report.json"
 
   jq -c '.plugins[]' "$report_path" | while IFS= read -r plugin; do
-    local slug status message color
+    local slug status message color reviewed_kind reviewed_value reviewed_text
     slug=$(jq -r '.slug' <<<"$plugin")
     status=$(jq -r '.status' <<<"$plugin")
+    reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$plugin")
+    reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$plugin")
+    reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
 
     case "$status" in
     reviewed)
@@ -852,6 +854,13 @@ render_pages() {
       --arg color "$color" \
       '{schemaVersion: 1, label: $label, message: $message, color: $color}' \
       >"$PAGES_DIR/plugin-maintenance/badges/${slug}.json"
+
+    jq -nc \
+      --arg label "current" \
+      --arg message "$reviewed_text" \
+      --arg color "blue" \
+      '{schemaVersion: 1, label: $label, message: $message, color: $color}' \
+      >"$PAGES_DIR/plugin-maintenance/badges/${slug}-current.json"
   done
 
   summary_html=$(jq -r '
