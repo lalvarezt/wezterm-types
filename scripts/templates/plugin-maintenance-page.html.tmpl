@@ -105,6 +105,42 @@
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       font-size: 0.92em;
     }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      overflow: hidden;
+      border-radius: 3px;
+      font-family: Verdana, Geneva, "DejaVu Sans", sans-serif;
+      font-size: 11px;
+      line-height: 20px;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .badge__label,
+    .badge__value {
+      padding: 0 7px;
+      color: #fff;
+    }
+    .badge__label {
+      background: #555;
+    }
+    .badge__value--reviewed {
+      background: #4c1;
+    }
+    .badge__value--review-required {
+      background: #dfb317;
+    }
+    .badge__value--unreviewed {
+      background: #fe7d37;
+    }
+    .badge__value--error {
+      background: #e05d44;
+    }
+    .badge__value--ref {
+      background: #007ec6;
+    }
     .compare-link {
       font-size: 0.92rem;
       white-space: nowrap;
