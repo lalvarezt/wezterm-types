@@ -212,7 +212,10 @@ __PLUGIN_ROWS__
       }
 
       const params = new URLSearchParams(window.location.search);
-      checkbox.checked = params.get('filter') !== 'all';
+      const anchor = window.location.hash.slice(1);
+      const anchoredRow = anchor ? document.getElementById(anchor) : null;
+      const hasPluginAnchor = anchoredRow && anchoredRow.matches('tbody tr[data-status]');
+      checkbox.checked = !hasPluginAnchor && params.get('filter') !== 'all';
 
       function applyFilter() {
         const outstandingOnly = checkbox.checked;
