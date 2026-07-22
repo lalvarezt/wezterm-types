@@ -284,9 +284,6 @@ jobs:
               echo "No upstream changes require review as of \`$(jq -r '.checked_at' "$report")\`."
             } > "$body"
             gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body"
-            if [[ "$issue_state" == "OPEN" ]]; then
-              gh issue close "$issue_number" --repo "$GITHUB_REPOSITORY"
-            fi
           fi
 
   report-health:

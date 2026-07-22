@@ -139,7 +139,8 @@ The manifest is the source of truth for the generated `README.md` table and main
 8. If the dedicated issue is missing, open the repository's **Actions** tab, select
    **Plugin Maintenance**, choose **Run workflow**, and run it on `main`. After Pages is deployed,
    the workflow creates the labeled issue when at least one plugin needs review. If every plugin is
-   reviewed, no issue is needed; an existing digest is updated and closed instead.
+   reviewed, an existing digest is updated with the all-reviewed state and remains open. Only a
+   maintainer may close the issue.
 
 ---
 
