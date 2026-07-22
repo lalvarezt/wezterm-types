@@ -221,20 +221,12 @@ repo_ref_url() {
   local kind=$2
   local value=$3
 
-  case "$kind" in
-  commit)
-    printf '%s/commit/%s\n' "$repo_url" "$value"
-    ;;
-  release)
-    printf '%s/releases/tag/%s\n' "$repo_url" "$value"
-    ;;
-  tag)
+  if [[ "$kind" != "none" ]]; then
     printf '%s/tree/%s\n' "$repo_url" "$value"
-    ;;
-  *)
-    printf '%s\n' "$repo_url"
-    ;;
-  esac
+    return
+  fi
+
+  printf '%s\n' "$repo_url"
 }
 
 render_ref_redirect() {
