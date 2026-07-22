@@ -443,13 +443,105 @@ validate() {
   validate_readme
 }
 
+sync_entry() {
+  trap - EXIT
+
+  local entry=$1
+  local output_path=$2
+  local error_path=$3
+  local repo reviewed_kind reviewed_value response_json repo_url
+  local latest_release latest_tag default_commit upstream_kind upstream_value status
+  local owner name
+  local -a repository_fields=()
+  # shellcheck disable=SC2016 # GraphQL variables are expanded by GitHub, not Bash.
+  local query='query($owner: String!, $name: String!) {
+    repository(owner: $owner, name: $name) {
+      url
+      latestRelease { tagName }
+      refs(
+        refPrefix: "refs/tags/"
+        first: 1
+        orderBy: { field: TAG_COMMIT_DATE, direction: DESC }
+      ) { nodes { name } }
+      defaultBranchRef { target { ... on Commit { oid } } }
+    }
+  }'
+
+  repo=$(jq -r '.repo' <<<"$entry")
+  reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$entry")
+  reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$entry")
+  repo_url="https://github.com/$repo"
+  owner=${repo%%/*}
+  name=${repo#*/}
+
+  if ! response_json=$(gh api graphql \
+    -f query="$query" \
+    -F owner="$owner" \
+    -F name="$name" \
+    2>"$error_path"); then
+    emit_sync_error_record "$entry" "$repo_url" "$(normalize_error_text "$error_path")" >"$output_path"
+    printf '\n' >>"$output_path"
+    return
+  fi
+
+  mapfile -t repository_fields < <(
+    jq -er '
+      .data.repository
+      | .url,
+        (.latestRelease.tagName // ""),
+        (.refs.nodes[0].name // ""),
+        (.defaultBranchRef.target.oid // "")
+    ' <<<"$response_json"
+  )
+  if ((${#repository_fields[@]} != 4)); then
+    emit_sync_error_record "$entry" "$repo_url" "Repository data was not returned by GitHub" >"$output_path"
+    printf '\n' >>"$output_path"
+    return
+  fi
+  repo_url=${repository_fields[0]}
+  latest_release=${repository_fields[1]}
+  latest_tag=${repository_fields[2]}
+  default_commit=${repository_fields[3]}
+
+  if [[ -n "$latest_release" ]]; then
+    upstream_kind="release"
+    upstream_value=$latest_release
+  elif [[ -n "$latest_tag" ]]; then
+    upstream_kind="tag"
+    upstream_value=$latest_tag
+  elif [[ -n "$default_commit" ]]; then
+    upstream_kind="commit"
+    upstream_value=$default_commit
+  else
+    emit_sync_error_record "$entry" "$repo_url" "Repository has no release, tag, or default-branch commit" >"$output_path"
+    printf '\n' >>"$output_path"
+    return
+  fi
+
+  if [[ "$reviewed_kind" == "none" ]]; then
+    status="unreviewed"
+  elif [[ "$reviewed_kind" == "$upstream_kind" && "$reviewed_value" == "$upstream_value" ]]; then
+    status="reviewed"
+  else
+    status="review_required"
+  fi
+
+  emit_sync_status_record "$entry" "$repo_url" "$status" "$upstream_kind" "$upstream_value" >"$output_path"
+  printf '\n' >>"$output_path"
+}
+
 sync() {
-  local checked_at repo_slug_value pages_base_url_value tmp tmp_err
+  local checked_at repo_slug_value pages_base_url_value tmp entries_path
   local selected_slugs=null selected_count unique_count manifest_count unknown_slugs slug
+  local sync_jobs=${PLUGIN_MAINTENANCE_SYNC_JOBS:-4}
+  local entry result_path error_path pid
+  local -a entries=() result_paths=() active_pids=()
 
   require_cmd gh
   require_cmd jq
   validate_manifest_schema
+  [[ "$sync_jobs" =~ ^[1-9][0-9]*$ ]] \
+    || die "PLUGIN_MAINTENANCE_SYNC_JOBS must be a positive integer"
 
   if [[ $# -gt 0 ]]; then
     for slug in "$@"; do
@@ -475,7 +567,7 @@ sync() {
   new_temp
   tmp=$TEMP_PATH
   new_temp
-  tmp_err=$TEMP_PATH
+  entries_path=$TEMP_PATH
   checked_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   repo_slug_value=$(repo_slug)
   pages_base_url_value=$(pages_base_url)
@@ -483,49 +575,31 @@ sync() {
   jq -c --argjson selected_slugs "$selected_slugs" '
     (if $selected_slugs == null then . else [.[] | select(.slug as $slug | $selected_slugs | index($slug))] end)
     | sort_by(.readme_name | ascii_downcase)[]
-  ' "$MANIFEST_PATH" | while IFS= read -r entry; do
-    local repo reviewed_kind reviewed_value repo_json release_json repo_url default_branch upstream_kind upstream_value status
-    repo=$(jq -r '.repo' <<<"$entry")
-    reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$entry")
-    reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$entry")
-    repo_url="https://github.com/$repo"
+  ' "$MANIFEST_PATH" >"$entries_path"
+  mapfile -t entries <"$entries_path"
 
-    if ! repo_json=$(gh api "repos/$repo" 2>"$tmp_err"); then
-      emit_sync_error_record "$entry" "$repo_url" "$(normalize_error_text "$tmp_err")" >>"$tmp"
-      printf '\n' >>"$tmp"
-      continue
+  for entry in "${entries[@]}"; do
+    new_temp
+    result_path=$TEMP_PATH
+    result_paths+=("$result_path")
+    new_temp
+    error_path=$TEMP_PATH
+
+    sync_entry "$entry" "$result_path" "$error_path" &
+    active_pids+=("$!")
+
+    if ((${#active_pids[@]} >= sync_jobs)); then
+      wait "${active_pids[0]}"
+      active_pids=("${active_pids[@]:1}")
     fi
+  done
 
-    repo_url=$(jq -r '.html_url' <<<"$repo_json")
-    default_branch=$(jq -r '.default_branch' <<<"$repo_json")
+  for pid in "${active_pids[@]}"; do
+    wait "$pid"
+  done
 
-    if release_json=$(gh api "repos/$repo/releases/latest" 2>/dev/null); then
-      upstream_kind="release"
-      upstream_value=$(jq -r '.tag_name' <<<"$release_json")
-    else
-      upstream_value=$(gh api "repos/$repo/tags?per_page=1" --jq '.[0].name // empty' 2>/dev/null || true)
-      if [[ -n "$upstream_value" ]]; then
-        upstream_kind="tag"
-      else
-        if ! upstream_value=$(gh api "repos/$repo/commits/$default_branch" --jq '.sha' 2>"$tmp_err"); then
-          emit_sync_error_record "$entry" "$repo_url" "$(normalize_error_text "$tmp_err")" >>"$tmp"
-          printf '\n' >>"$tmp"
-          continue
-        fi
-        upstream_kind="commit"
-      fi
-    fi
-
-    if [[ "$reviewed_kind" == "none" ]]; then
-      status="unreviewed"
-    elif [[ "$reviewed_kind" == "$upstream_kind" && "$reviewed_value" == "$upstream_value" ]]; then
-      status="reviewed"
-    else
-      status="review_required"
-    fi
-
-    emit_sync_status_record "$entry" "$repo_url" "$status" "$upstream_kind" "$upstream_value" >>"$tmp"
-    printf '\n' >>"$tmp"
+  for result_path in "${result_paths[@]}"; do
+    cat "$result_path" >>"$tmp"
   done
 
   jq -s \
