@@ -13,8 +13,8 @@
     "repo": "dimao/ai-commander.wezterm",
     "readme_name": "ai-commander.wezterm",
     "reviewed_ref": {
-      "kind": "commit",
-      "value": "8b063e4a89f5057851649a1fd868b83e4b9f74a8"
+      "kind": "release",
+      "value": "v0.0.2"
     }
   },
   {
@@ -57,7 +57,10 @@
     "slug": "chord",
     "repo": "sravioli/chord.wz",
     "readme_name": "chord.wz",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "release",
+      "value": "1.1.0"
+    }
   },
   {
     "slug": "cmd-sender",
@@ -83,7 +86,7 @@
     "readme_name": "dev.wezterm",
     "reviewed_ref": {
       "kind": "commit",
-      "value": "1b5d9e06a084b6ee8382636137a37c77c221df27"
+      "value": "40dea555a1112e1d353a61646647c739a3ce112f"
     }
   },
   {
