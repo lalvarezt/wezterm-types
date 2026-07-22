@@ -84,22 +84,19 @@ jobs:
       - name: Compute publish signature
         run: |
           set -euo pipefail
-          report_hash=$(jq -c 'del(.checked_at)' "${PLUGIN_MAINTENANCE_BUILD_DIR}/report.json" | sha256sum | cut -d' ' -f1)
-          script_hash=$(sha256sum scripts/plugin-maintenance.sh | cut -d' ' -f1)
-          page_template_hash=$(sha256sum scripts/templates/plugin-maintenance-page.html.tmpl | cut -d' ' -f1)
-          redirect_template_hash=$(sha256sum scripts/templates/plugin-maintenance-redirect.html.tmpl | cut -d' ' -f1)
-          jq -nc \
-            --arg report_hash "$report_hash" \
-            --arg script_hash "$script_hash" \
-            --arg page_template_hash "$page_template_hash" \
-            --arg redirect_template_hash "$redirect_template_hash" \
-            '{
-              report_hash: $report_hash,
-              script_hash: $script_hash,
-              page_template_hash: $page_template_hash,
-              redirect_template_hash: $redirect_template_hash
-            }' \
-            > "${PLUGIN_MAINTENANCE_BUILD_DIR}/pages/plugin-maintenance/content-signature.json"
+          pages_dir="${PLUGIN_MAINTENANCE_BUILD_DIR}/pages"
+          signature_path="${pages_dir}/plugin-maintenance/content-signature.json"
+          content_hash=$(
+            find "$pages_dir" -type f ! -path "$signature_path" -printf '%P\0' \
+              | sort -z \
+              | while IFS= read -r -d '' relative_path; do
+                  printf '%s\0' "$relative_path"
+                  sha256sum "${pages_dir}/${relative_path}" | cut -d' ' -f1
+                done \
+              | sha256sum \
+              | cut -d' ' -f1
+          )
+          jq -nc --arg content_hash "$content_hash" '{content_hash: $content_hash}' > "$signature_path"
 
       - name: Check for publish changes
         id: publish_check
