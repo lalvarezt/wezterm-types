@@ -14,7 +14,6 @@ SYNC_PATH="${PLUGIN_MAINTENANCE_SYNC_PATH:-$BUILD_DIR/report.json}"
 PAGES_DIR="${PLUGIN_MAINTENANCE_PAGES_DIR:-$BUILD_DIR/pages}"
 START_MARKER="<!-- plugin-table:start -->"
 END_MARKER="<!-- plugin-table:end -->"
-CURRENT_BADGE_VERSION=1
 TEMP_FILES=()
 TEMP_PATH=""
 
@@ -92,13 +91,11 @@ pages_base_url() {
   printf 'https://%s.github.io/%s\n' "$owner" "$repo"
 }
 
-badge_url() {
+badge_asset_url() {
   local slug=$1
-  local endpoint encoded
+  local badge=$2
 
-  endpoint="$(pages_base_url)/plugin-maintenance/badges/${slug}.json"
-  encoded=$(jq -rn --arg value "$endpoint" '$value | @uri')
-  printf 'https://img.shields.io/endpoint?url=%s\n' "$encoded"
+  printf '%s/plugin-maintenance/badges/%s-%s.svg\n' "$(pages_base_url)" "$slug" "$badge"
 }
 
 report_url() {
@@ -163,31 +160,73 @@ reviewed_ref_text() {
   printf '%s\n' "$value"
 }
 
-current_badge_url() {
-  local slug=$1
-  local endpoint encoded
+ref_badge_text() {
+  local kind=$1
+  local value=$2
 
-  endpoint="$(pages_base_url)/plugin-maintenance/badges/${slug}-current.json?v=${CURRENT_BADGE_VERSION}"
-  encoded=$(jq -rn --arg value "$endpoint" '$value | @uri')
-  printf 'https://img.shields.io/endpoint?url=%s\n' "$encoded"
+  if [[ "$kind" == "none" ]]; then
+    printf 'none\n'
+    return
+  fi
+
+  if [[ "$kind" == "commit" ]]; then
+    printf 'commit:%s\n' "${value:0:7}"
+    return
+  fi
+
+  printf '%s:%s\n' "$kind" "$value"
+}
+
+render_badge_svg() {
+  local label=$1
+  local message=$2
+  local color=$3
+  local output=$4
+  local label_width message_width total_width label_x message_x aria_label label_text message_text
+
+  label_width=$(( ${#label} * 7 + 10 ))
+  message_width=$(( ${#message} * 7 + 10 ))
+  total_width=$(( label_width + message_width ))
+  label_x=$(( label_width / 2 ))
+  message_x=$(( label_width + message_width / 2 ))
+  aria_label=$(jq -rn --arg value "$label: $message" '$value | @html')
+  label_text=$(jq -rn --arg value "$label" '$value | @html')
+  message_text=$(jq -rn --arg value "$message" '$value | @html')
+
+  {
+    printf '<svg xmlns="http://www.w3.org/2000/svg" width="%s" height="20" role="img" aria-label="%s">\n' "$total_width" "$aria_label"
+    printf '  <title>%s</title>\n' "$aria_label"
+    printf '  <clipPath id="r"><rect width="%s" height="20" rx="3"/></clipPath>\n' "$total_width"
+    printf '  <g clip-path="url(#r)">\n'
+    printf '    <rect width="%s" height="20" fill="#555"/>\n' "$label_width"
+    printf '    <rect x="%s" width="%s" height="20" fill="%s"/>\n' "$label_width" "$message_width" "$color"
+    printf '  </g>\n'
+    printf '  <g fill="#fff" text-anchor="middle" font-family="Verdana, Geneva, DejaVu Sans, sans-serif" font-size="11">\n'
+    printf '    <text x="%s" y="14">%s</text>\n' "$label_x" "$label_text"
+    printf '    <text x="%s" y="14">%s</text>\n' "$message_x" "$message_text"
+    printf '  </g>\n'
+    printf '</svg>\n'
+  } >"$output"
 }
 
 render_table_block() {
-  printf '| Plugin | Documentation | Neovim Help | &nbsp;Status&nbsp;/&nbsp;Current&nbsp; |\n'
+  printf '| Plugin | Documentation | Neovim Help | Maintenance |\n'
   printf '| --- | --- | --- | --- |\n'
 
   while IFS=$'\t' read -r slug readme_name repo; do
-    local plugin_cell docs_cell help_cell status_cell current_url
+    local plugin_cell docs_cell help_cell maintenance_cell status_url reviewed_url upstream_url
     local docs_path="docs/${slug}.md"
     local vimdoc_path="doc/wezterm-types-plugin.${slug}.txt"
     plugin_cell="[$readme_name](https://github.com/$repo)"
     docs_cell="[$docs_path](./$docs_path)"
     help_cell="[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
-    current_url=$(current_badge_url "$slug")
-    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br>![Current](${current_url})"
+    status_url=$(badge_asset_url "$slug" "status")
+    reviewed_url=$(badge_asset_url "$slug" "reviewed")
+    upstream_url=$(badge_asset_url "$slug" "upstream")
+    maintenance_cell="[![Status](${status_url})]($(report_url "$slug"))<br>![Reviewed baseline](${reviewed_url})<br>![Latest upstream](${upstream_url})"
 
     printf '| %s | %s | %s | %s |\n' \
-      "$plugin_cell" "$docs_cell" "$help_cell" "$status_cell"
+      "$plugin_cell" "$docs_cell" "$help_cell" "$maintenance_cell"
   done < <(
     jq -r '
       sort_by(.readme_name | ascii_downcase)
@@ -822,29 +861,38 @@ render_pages() {
   cp "$report_path" "$PAGES_DIR/plugin-maintenance/report.json"
 
   jq -c '.plugins[]' "$report_path" | while IFS= read -r plugin; do
-    local slug status message color reviewed_kind reviewed_value reviewed_text
+    local slug status message color svg_color reviewed_kind reviewed_value reviewed_text reviewed_badge_text
+    local upstream_kind upstream_value upstream_badge_text
     slug=$(jq -r '.slug' <<<"$plugin")
     status=$(jq -r '.status' <<<"$plugin")
     reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$plugin")
     reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$plugin")
     reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
+    reviewed_badge_text=$(ref_badge_text "$reviewed_kind" "$reviewed_value")
+    upstream_kind=$(jq -r '.upstream_ref.kind // "none"' <<<"$plugin")
+    upstream_value=$(jq -r '.upstream_ref.value // ""' <<<"$plugin")
+    upstream_badge_text=$(ref_badge_text "$upstream_kind" "$upstream_value")
 
     case "$status" in
     reviewed)
       message="reviewed"
       color="brightgreen"
+      svg_color="#4c1"
       ;;
     review_required)
       message="to review"
       color="yellow"
+      svg_color="#dfb317"
       ;;
     unreviewed)
       message="unreviewed"
       color="orange"
+      svg_color="#fe7d37"
       ;;
     *)
       message="error"
       color="red"
+      svg_color="#e05d44"
       ;;
     esac
 
@@ -861,6 +909,13 @@ render_pages() {
       --arg color "blue" \
       '{schemaVersion: 1, label: $label, message: $message, color: $color}' \
       >"$PAGES_DIR/plugin-maintenance/badges/${slug}-current.json"
+
+    render_badge_svg "status" "$message" "$svg_color" \
+      "$PAGES_DIR/plugin-maintenance/badges/${slug}-status.svg"
+    render_badge_svg "reviewed" "$reviewed_badge_text" "#007ec6" \
+      "$PAGES_DIR/plugin-maintenance/badges/${slug}-reviewed.svg"
+    render_badge_svg "upstream" "$upstream_badge_text" "#007ec6" \
+      "$PAGES_DIR/plugin-maintenance/badges/${slug}-upstream.svg"
   done
 
   summary_html=$(jq -r '
