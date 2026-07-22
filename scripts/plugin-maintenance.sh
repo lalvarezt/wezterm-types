@@ -98,6 +98,13 @@ badge_asset_url() {
   printf '%s/plugin-maintenance/badges/%s-%s.svg\n' "$(pages_base_url)" "$slug" "$badge"
 }
 
+badge_ref_url() {
+  local slug=$1
+  local ref=$2
+
+  printf '%s/plugin-maintenance/refs/%s-%s.html\n' "$(pages_base_url)" "$slug" "$ref"
+}
+
 report_url() {
   local slug=$1
 
@@ -209,12 +216,54 @@ render_badge_svg() {
   } >"$output"
 }
 
+repo_ref_url() {
+  local repo_url=$1
+  local kind=$2
+  local value=$3
+
+  case "$kind" in
+  commit)
+    printf '%s/commit/%s\n' "$repo_url" "$value"
+    ;;
+  release)
+    printf '%s/releases/tag/%s\n' "$repo_url" "$value"
+    ;;
+  tag)
+    printf '%s/tree/%s\n' "$repo_url" "$value"
+    ;;
+  *)
+    printf '%s\n' "$repo_url"
+    ;;
+  esac
+}
+
+render_ref_redirect() {
+  local target_url=$1
+  local output=$2
+  local escaped_url
+
+  escaped_url=$(jq -rn --arg value "$target_url" '$value | @html')
+  {
+    printf '<!doctype html>\n'
+    printf '<html lang="en">\n'
+    printf '<head>\n'
+    printf '  <meta charset="utf-8">\n'
+    printf '  <meta http-equiv="refresh" content="0; url=%s">\n' "$escaped_url"
+    printf '  <link rel="canonical" href="%s">\n' "$escaped_url"
+    printf '  <title>Redirecting…</title>\n'
+    printf '</head>\n'
+    printf '<body><p>Redirecting to <a href="%s">the reviewed upstream reference</a>.</p></body>\n' "$escaped_url"
+    printf '</html>\n'
+  } >"$output"
+}
+
 render_table_block() {
   printf '| Plugin | Documentation | Maintenance |\n'
   printf '| --- | --- | --- |\n'
 
   while IFS=$'\t' read -r slug readme_name repo; do
     local plugin_cell docs_cell maintenance_cell status_url reviewed_url upstream_url
+    local reviewed_link upstream_link
     local docs_path="docs/${slug}.md"
     local vimdoc_path="doc/wezterm-types-plugin.${slug}.txt"
     plugin_cell="[$readme_name](https://github.com/$repo)"
@@ -222,7 +271,9 @@ render_table_block() {
     status_url=$(badge_asset_url "$slug" "status")
     reviewed_url=$(badge_asset_url "$slug" "reviewed")
     upstream_url=$(badge_asset_url "$slug" "upstream")
-    maintenance_cell="[![Status](${status_url})]($(report_url "$slug"))<br>![Reviewed baseline](${reviewed_url})<br>![Latest upstream](${upstream_url})"
+    reviewed_link=$(badge_ref_url "$slug" "reviewed")
+    upstream_link=$(badge_ref_url "$slug" "upstream")
+    maintenance_cell="[![Status](${status_url})]($(report_url "$slug"))<br>[![Reviewed baseline](${reviewed_url})](${reviewed_link})<br>[![Latest upstream](${upstream_url})](${upstream_link})"
 
     printf '| %s | %s | %s |\n' \
       "$plugin_cell" "$docs_cell" "$maintenance_cell"
@@ -856,14 +907,15 @@ render_pages() {
 
   validate_pages_dir
   rm -rf "$PAGES_DIR"
-  mkdir -p "$PAGES_DIR/plugin-maintenance/badges"
+  mkdir -p "$PAGES_DIR/plugin-maintenance/badges" "$PAGES_DIR/plugin-maintenance/refs"
   cp "$report_path" "$PAGES_DIR/plugin-maintenance/report.json"
 
   jq -c '.plugins[]' "$report_path" | while IFS= read -r plugin; do
     local slug status message color svg_color reviewed_kind reviewed_value reviewed_text reviewed_badge_text
-    local upstream_kind upstream_value upstream_badge_text
+    local upstream_kind upstream_value upstream_badge_text repo_url reviewed_target upstream_target
     slug=$(jq -r '.slug' <<<"$plugin")
     status=$(jq -r '.status' <<<"$plugin")
+    repo_url=$(jq -r '.repo_url' <<<"$plugin")
     reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$plugin")
     reviewed_value=$(jq -r '.reviewed_ref.value // ""' <<<"$plugin")
     reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
@@ -915,6 +967,13 @@ render_pages() {
       "$PAGES_DIR/plugin-maintenance/badges/${slug}-reviewed.svg"
     render_badge_svg "upstream" "$upstream_badge_text" "#007ec6" \
       "$PAGES_DIR/plugin-maintenance/badges/${slug}-upstream.svg"
+
+    reviewed_target=$(repo_ref_url "$repo_url" "$reviewed_kind" "$reviewed_value")
+    upstream_target=$(repo_ref_url "$repo_url" "$upstream_kind" "$upstream_value")
+    render_ref_redirect "$reviewed_target" \
+      "$PAGES_DIR/plugin-maintenance/refs/${slug}-reviewed.html"
+    render_ref_redirect "$upstream_target" \
+      "$PAGES_DIR/plugin-maintenance/refs/${slug}-upstream.html"
   done
 
   summary_html=$(jq -r '
