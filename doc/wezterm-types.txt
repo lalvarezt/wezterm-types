@@ -76,110 +76,110 @@ This project also features type annotations for various WezTerm plugins.
 
 **If you want to add your plugin, please read CONTRIBUTING.md.**
 
-  --------------------------------------------------------------------------------------------------------------------------------------------------
-  Plugin                             Documentation                      Neovim Help                                         Status
-  ---------------------------------- ---------------------------------- --------------------------------------------------- ------------------------
-  ai-commander.wezterm               docs/ai-commander.md               :h wezterm-types-plugin.ai-commander.txt            [status]release:v0.0.2
+  ----------------------------------------------------------------------------------------------------------------------------------------------
+  Plugin                             Documentation                      Neovim Help                                          Status / Current 
+  ---------------------------------- ---------------------------------- --------------------------------------------------- --------------------
+  ai-commander.wezterm               docs/ai-commander.md               :h wezterm-types-plugin.ai-commander.txt            [status][Current]
 
-  ai-helper.wezterm                  docs/ai-helper.md                  :h wezterm-types-plugin.ai-helper.txt               [status]commit:68ce596
+  ai-helper.wezterm                  docs/ai-helper.md                  :h wezterm-types-plugin.ai-helper.txt               [status][Current]
 
-  bar.wezterm                        docs/bar.md                        :h wezterm-types-plugin.bar.txt                     [status]release:1.4.0
+  bar.wezterm                        docs/bar.md                        :h wezterm-types-plugin.bar.txt                     [status][Current]
 
-  battery.wez                        docs/battery.md                    :h wezterm-types-plugin.battery.txt                 [status]commit:0b6d503
+  battery.wez                        docs/battery.md                    :h wezterm-types-plugin.battery.txt                 [status][Current]
 
-  chord.wz                           docs/chord.md                      :h wezterm-types-plugin.chord.txt                   [status]release:1.1.0
+  chord.wz                           docs/chord.md                      :h wezterm-types-plugin.chord.txt                   [status][Current]
 
-  dev.wezterm                        docs/dev.md                        :h wezterm-types-plugin.dev.txt                     [status]commit:40dea55
+  dev.wezterm                        docs/dev.md                        :h wezterm-types-plugin.dev.txt                     [status][Current]
 
-  kanagawa.wz                        docs/kanagawa.md                   :h wezterm-types-plugin.kanagawa.txt                [status]release:1.0.1
+  kanagawa.wz                        docs/kanagawa.md                   :h wezterm-types-plugin.kanagawa.txt                [status][Current]
 
-  lantern.wz                         docs/lantern.md                    :h wezterm-types-plugin.lantern.txt                 [status]none
+  lantern.wz                         docs/lantern.md                    :h wezterm-types-plugin.lantern.txt                 [status][Current]
 
-  lib.wezterm                        docs/lib.md                        :h wezterm-types-plugin.lib.txt                     [status]commit:ea5163d
+  lib.wezterm                        docs/lib.md                        :h wezterm-types-plugin.lib.txt                     [status][Current]
 
-  listeners.wezterm                  docs/listeners.md                  :h wezterm-types-plugin.listeners.txt               [status]commit:990e1d1
+  listeners.wezterm                  docs/listeners.md                  :h wezterm-types-plugin.listeners.txt               [status][Current]
 
-  log.wz                             docs/log.md                        :h wezterm-types-plugin.log.txt                     [status]release:1.0.2
+  log.wz                             docs/log.md                        :h wezterm-types-plugin.log.txt                     [status][Current]
 
-  memo.wz                            docs/memo.md                       :h wezterm-types-plugin.memo.txt                    [status]release:0.1.3
+  memo.wz                            docs/memo.md                       :h wezterm-types-plugin.memo.txt                    [status][Current]
 
-  modal.wezterm                      docs/modal.md                      :h wezterm-types-plugin.modal.txt                   [status]release:1.0
+  modal.wezterm                      docs/modal.md                      :h wezterm-types-plugin.modal.txt                   [status][Current]
 
-  passrelay.wezterm                  docs/passrelay.md                  :h wezterm-types-plugin.passrelay.txt               [status]commit:8a80a94
+  passrelay.wezterm                  docs/passrelay.md                  :h wezterm-types-plugin.passrelay.txt               [status][Current]
 
-  pinned-tabs.wezterm                docs/pinned-tabs.md                :h wezterm-types-plugin.pinned-tabs.txt             [status]commit:a58ed31
+  pinned-tabs.wezterm                docs/pinned-tabs.md                :h wezterm-types-plugin.pinned-tabs.txt             [status][Current]
 
-  pivot_panes.wezterm                docs/pivot-panes.md                :h wezterm-types-plugin.pivot-panes.txt             [status]commit:6d4d628
+  pivot_panes.wezterm                docs/pivot-panes.md                :h wezterm-types-plugin.pivot-panes.txt             [status][Current]
 
-  presentation.wez                   docs/presentation.md               :h wezterm-types-plugin.presentation.txt            [status]commit:55f4bbf
+  presentation.wez                   docs/presentation.md               :h wezterm-types-plugin.presentation.txt            [status][Current]
 
-  quick_domains.wezterm              docs/quick-domains.md              :h wezterm-types-plugin.quick-domains.txt           [status]commit:e026c6a
+  quick_domains.wezterm              docs/quick-domains.md              :h wezterm-types-plugin.quick-domains.txt           [status][Current]
 
-  quickselect.wezterm                docs/quickselect.md                :h wezterm-types-plugin.quickselect.txt             [status]commit:2b16aaa
+  quickselect.wezterm                docs/quickselect.md                :h wezterm-types-plugin.quickselect.txt             [status][Current]
 
-  resurrect.wezterm                  docs/resurrect.md                  :h wezterm-types-plugin.resurrect.txt               [status]release:v1.0.0
+  resurrect.wezterm                  docs/resurrect.md                  :h wezterm-types-plugin.resurrect.txt               [status][Current]
 
-  ribbon.wz                          docs/ribbon.md                     :h wezterm-types-plugin.ribbon.txt                  [status]none
+  ribbon.wz                          docs/ribbon.md                     :h wezterm-types-plugin.ribbon.txt                  [status][Current]
 
-  rosepine                           docs/rosepine.md                   :h wezterm-types-plugin.rosepine.txt                [status]commit:7b7dff5
+  rosepine                           docs/rosepine.md                   :h wezterm-types-plugin.rosepine.txt                [status][Current]
 
-  sessionizer.wezterm                docs/sessionizer.md                :h wezterm-types-plugin.sessionizer.txt             [status]release:v1.0.0
+  sessionizer.wezterm                docs/sessionizer.md                :h wezterm-types-plugin.sessionizer.txt             [status][Current]
 
-  sigil.wz                           docs/sigil.md                      :h wezterm-types-plugin.sigil.txt                   [status]none
+  sigil.wz                           docs/sigil.md                      :h wezterm-types-plugin.sigil.txt                   [status][Current]
 
-  smart-splits.nvim                  docs/smart-splits.md               :h wezterm-types-plugin.smart-splits.txt            [status]release:v2.0.5
+  smart-splits.nvim                  docs/smart-splits.md               :h wezterm-types-plugin.smart-splits.txt            [status][Current]
 
-  smart_workspace_switcher.wezterm   docs/smart-workspace-switcher.md   :h                                                  [status]release:1.2.0
+  smart_workspace_switcher.wezterm   docs/smart-workspace-switcher.md   :h                                                  [status][Current]
                                                                         wezterm-types-plugin.smart-workspace-switcher.txt   
 
-  stack.wez                          docs/stack.md                      :h wezterm-types-plugin.stack.txt                   [status]commit:237ce91
+  stack.wez                          docs/stack.md                      :h wezterm-types-plugin.stack.txt                   [status][Current]
 
-  sync-panes.wez                     docs/sync-panes.md                 :h wezterm-types-plugin.sync-panes.txt              [status]none
+  sync-panes.wez                     docs/sync-panes.md                 :h wezterm-types-plugin.sync-panes.txt              [status][Current]
 
-  tabline.wez                        docs/tabline.md                    :h wezterm-types-plugin.tabline.txt                 [status]release:v1.6.0
+  tabline.wez                        docs/tabline.md                    :h wezterm-types-plugin.tabline.txt                 [status][Current]
 
-  tabsets.wezterm                    docs/tabsets.md                    :h wezterm-types-plugin.tabsets.txt                 [status]tag:v1.0.0
+  tabsets.wezterm                    docs/tabsets.md                    :h wezterm-types-plugin.tabsets.txt                 [status][Current]
 
-  toggle_terminal.wez                docs/toggle-terminal.md            :h wezterm-types-plugin.toggle-terminal.txt         [status]commit:5eb0115
+  toggle_terminal.wez                docs/toggle-terminal.md            :h wezterm-types-plugin.toggle-terminal.txt         [status][Current]
 
-  warp.wz                            docs/warp.md                       :h wezterm-types-plugin.warp.txt                    [status]release:0.1.1
+  warp.wz                            docs/warp.md                       :h wezterm-types-plugin.warp.txt                    [status][Current]
 
-  wez-pain-control                   docs/wez-pain-control.md           :h wezterm-types-plugin.wez-pain-control.txt        [status]commit:f11241a
+  wez-pain-control                   docs/wez-pain-control.md           :h wezterm-types-plugin.wez-pain-control.txt        [status][Current]
 
-  wez-tmux                           docs/wez-tmux.md                   :h wezterm-types-plugin.wez-tmux.txt                [status]commit:d53fb08
+  wez-tmux                           docs/wez-tmux.md                   :h wezterm-types-plugin.wez-tmux.txt                [status][Current]
 
-  wezterm-agent-deck                 docs/agent-deck.md                 :h wezterm-types-plugin.agent-deck.txt              [status]commit:bd5a57e
+  wezterm-agent-deck                 docs/agent-deck.md                 :h wezterm-types-plugin.agent-deck.txt              [status][Current]
 
-  wezterm-attention                  docs/attention.md                  :h wezterm-types-plugin.attention.txt               [status]release:v0.3.3
+  wezterm-attention                  docs/attention.md                  :h wezterm-types-plugin.attention.txt               [status][Current]
 
-  wezterm-cmd-sender                 docs/cmd-sender.md                 :h wezterm-types-plugin.cmd-sender.txt              [status]release:v1.0.1
+  wezterm-cmd-sender                 docs/cmd-sender.md                 :h wezterm-types-plugin.cmd-sender.txt              [status][Current]
 
-  wezterm-cmdpicker                  docs/cmdpicker.md                  :h wezterm-types-plugin.cmdpicker.txt               [status]release:0.2.0
+  wezterm-cmdpicker                  docs/cmdpicker.md                  :h wezterm-types-plugin.cmdpicker.txt               [status][Current]
 
-  wezterm-config.nvim                docs/wezterm-config.md             :h wezterm-types-plugin.wezterm-config.txt          [status]commit:53aebc6
+  wezterm-config.nvim                docs/wezterm-config.md             :h wezterm-types-plugin.wezterm-config.txt          [status][Current]
 
-  wezterm-quota-limit                docs/quota-limit.md                :h wezterm-types-plugin.quota-limit.txt             [status]commit:5dd4ec7
+  wezterm-quota-limit                docs/quota-limit.md                :h wezterm-types-plugin.quota-limit.txt             [status][Current]
 
-  wezterm-replay                     docs/replay.md                     :h wezterm-types-plugin.replay.txt                  [status]commit:936fc26
+  wezterm-replay                     docs/replay.md                     :h wezterm-types-plugin.replay.txt                  [status][Current]
 
-  wezterm-sessions                   docs/wezterm-sessions.md           :h wezterm-types-plugin.wezterm-sessions.txt        [status]release:1.7.1
+  wezterm-sessions                   docs/wezterm-sessions.md           :h wezterm-types-plugin.wezterm-sessions.txt        [status][Current]
 
-  wezterm-status                     docs/wezterm-status.md             :h wezterm-types-plugin.wezterm-status.txt          [status]commit:e537993
+  wezterm-status                     docs/wezterm-status.md             :h wezterm-types-plugin.wezterm-status.txt          [status][Current]
 
-  wezterm-sync                       docs/sync.md                       :h wezterm-types-plugin.sync.txt                    [status]none
+  wezterm-sync                       docs/sync.md                       :h wezterm-types-plugin.sync.txt                    [status][Current]
 
-  wezterm-tabs                       docs/wezterm-tabs.md               :h wezterm-types-plugin.wezterm-tabs.txt            [status]commit:47e5374
+  wezterm-tabs                       docs/wezterm-tabs.md               :h wezterm-types-plugin.wezterm-tabs.txt            [status][Current]
 
-  wezterm-theme-rotator              docs/wezterm-theme-rotator.md      :h wezterm-types-plugin.wezterm-theme-rotator.txt   [status]commit:a3ce87f
+  wezterm-theme-rotator              docs/wezterm-theme-rotator.md      :h wezterm-types-plugin.wezterm-theme-rotator.txt   [status][Current]
 
-  widgets.wez                        docs/widgets.md                    :h wezterm-types-plugin.widgets.txt                 [status]none
+  widgets.wez                        docs/widgets.md                    :h wezterm-types-plugin.widgets.txt                 [status][Current]
 
-  workspace-picker.wezterm           docs/workspace-picker.md           :h wezterm-types-plugin.workspace-picker.txt        [status]release:v0.2.0
+  workspace-picker.wezterm           docs/workspace-picker.md           :h wezterm-types-plugin.workspace-picker.txt        [status][Current]
 
-  workspacesionizer.wezterm          docs/workspacesionizer.md          :h wezterm-types-plugin.workspacesionizer.txt       [status]commit:b6cc1b0
+  workspacesionizer.wezterm          docs/workspacesionizer.md          :h wezterm-types-plugin.workspacesionizer.txt       [status][Current]
 
-  wsinit.wezterm                     docs/wsinit.md                     :h wezterm-types-plugin.wsinit.txt                  [status]release:1.0.0
-  --------------------------------------------------------------------------------------------------------------------------------------------------
+  wsinit.wezterm                     docs/wsinit.md                     :h wezterm-types-plugin.wsinit.txt                  [status][Current]
+  ----------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 
 USAGE                                                    *wezterm-types-usage*
