@@ -210,23 +210,22 @@ render_badge_svg() {
 }
 
 render_table_block() {
-  printf '| Plugin | Documentation | Neovim Help | Maintenance |\n'
-  printf '| --- | --- | --- | --- |\n'
+  printf '| Plugin | Documentation | Maintenance |\n'
+  printf '| --- | --- | --- |\n'
 
   while IFS=$'\t' read -r slug readme_name repo; do
-    local plugin_cell docs_cell help_cell maintenance_cell status_url reviewed_url upstream_url
+    local plugin_cell docs_cell maintenance_cell status_url reviewed_url upstream_url
     local docs_path="docs/${slug}.md"
     local vimdoc_path="doc/wezterm-types-plugin.${slug}.txt"
     plugin_cell="[$readme_name](https://github.com/$repo)"
-    docs_cell="[$docs_path](./$docs_path)"
-    help_cell="[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
+    docs_cell="[$docs_path](./$docs_path)<br>[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
     status_url=$(badge_asset_url "$slug" "status")
     reviewed_url=$(badge_asset_url "$slug" "reviewed")
     upstream_url=$(badge_asset_url "$slug" "upstream")
     maintenance_cell="[![Status](${status_url})]($(report_url "$slug"))<br>![Reviewed baseline](${reviewed_url})<br>![Latest upstream](${upstream_url})"
 
-    printf '| %s | %s | %s | %s |\n' \
-      "$plugin_cell" "$docs_cell" "$help_cell" "$maintenance_cell"
+    printf '| %s | %s | %s |\n' \
+      "$plugin_cell" "$docs_cell" "$maintenance_cell"
   done < <(
     jq -r '
       sort_by(.readme_name | ascii_downcase)
