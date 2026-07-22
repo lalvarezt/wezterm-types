@@ -79,7 +79,7 @@ This project also features type annotations for various WezTerm plugins.
   --------------------------------------------------------------------------------------------------------------------------------------------------
   Plugin                             Documentation                      Neovim Help                                         Status
   ---------------------------------- ---------------------------------- --------------------------------------------------- ------------------------
-  ai-commander.wezterm               docs/ai-commander.md               :h wezterm-types-plugin.ai-commander.txt            [status]commit:8b063e4
+  ai-commander.wezterm               docs/ai-commander.md               :h wezterm-types-plugin.ai-commander.txt            [status]release:v0.0.2
 
   ai-helper.wezterm                  docs/ai-helper.md                  :h wezterm-types-plugin.ai-helper.txt               [status]commit:68ce596
 
@@ -87,9 +87,9 @@ This project also features type annotations for various WezTerm plugins.
 
   battery.wez                        docs/battery.md                    :h wezterm-types-plugin.battery.txt                 [status]commit:0b6d503
 
-  chord.wz                           docs/chord.md                      :h wezterm-types-plugin.chord.txt                   [status]none
+  chord.wz                           docs/chord.md                      :h wezterm-types-plugin.chord.txt                   [status]release:1.1.0
 
-  dev.wezterm                        docs/dev.md                        :h wezterm-types-plugin.dev.txt                     [status]commit:1b5d9e0
+  dev.wezterm                        docs/dev.md                        :h wezterm-types-plugin.dev.txt                     [status]commit:40dea55
 
   kanagawa.wz                        docs/kanagawa.md                   :h wezterm-types-plugin.kanagawa.txt                [status]release:1.0.1
 
