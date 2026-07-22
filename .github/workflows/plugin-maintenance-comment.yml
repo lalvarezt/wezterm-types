@@ -26,6 +26,8 @@ jobs:
        startsWith(github.event.comment.body, '/refresh') ||
        startsWith(github.event.comment.body, '/help'))
     runs-on: ubuntu-latest
+    outputs:
+      acceptances: ${{ steps.refs.outputs.acceptances }}
     env:
       GH_TOKEN: ${{ github.token }}
       COMMENT_BODY: ${{ github.event.comment.body }}
@@ -167,21 +169,16 @@ jobs:
           acceptances=$(jq -c 'sort_by(.plugin)' <<< "$acceptances")
           echo "acceptances=$acceptances" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch acceptance workflow
+      - name: Acknowledge acceptance request
         if: steps.command.outputs.action == 'accept'
         env:
           ACCEPTANCES: ${{ steps.refs.outputs.acceptances }}
         run: |
           set -euo pipefail
-          gh workflow run plugin-maintenance-accept.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref "$DEFAULT_BRANCH" \
-            -f acceptances="$ACCEPTANCES"
-
           selection=$(jq -r 'map("`" + .plugin + "` at `" + .candidate_ref + "`") | join(", ")' <<< "$ACCEPTANCES")
-          workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance-accept.yml"
+          workflow_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
-            "$(printf 'Acceptance requested for %s in one PR.\n\n[Track the acceptance workflow](%s).' "$selection" "$workflow_url")"
+            "$(printf 'Acceptance requested for %s in one PR.\n\n[Track the maintenance command](%s).' "$selection" "$workflow_url")"
 
       - name: Dispatch maintenance refresh
         if: steps.command.outputs.action == 'refresh'
@@ -213,3 +210,15 @@ jobs:
           Commands must be the only content in a comment. Acceptance commands create a PR; they do not modify annotation files directly.
           EOF
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$body"
+
+  accept-reviewed-refs:
+    name: Accept reviewed refs
+    needs: handle-maintenance-command
+    if: needs.handle-maintenance-command.outputs.acceptances != ''
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/plugin-maintenance-accept.yml
+    with:
+      acceptances: ${{ needs.handle-maintenance-command.outputs.acceptances }}

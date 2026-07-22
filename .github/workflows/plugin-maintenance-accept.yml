@@ -3,7 +3,7 @@ name: Accept Plugin Reviews
 run-name: Accept plugin review selection
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       acceptances:
         description: JSON array of plugin, expected_reviewed_ref, and candidate_ref objects
@@ -16,6 +16,7 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -107,9 +108,11 @@ jobs:
             pr_title="$commit_message"
           fi
 
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          echo "commit_message=$commit_message" >> "$GITHUB_OUTPUT"
-          echo "pr_title=$pr_title" >> "$GITHUB_OUTPUT"
+          {
+            echo "branch=$branch"
+            echo "commit_message=$commit_message"
+            echo "pr_title=$pr_title"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit reviewed baselines
         if: steps.update.outputs.changed == 'true'
