@@ -908,9 +908,6 @@ render_pages() {
       end
     ) as $upstream_url
     | (
-      "/accept " + .slug
-    ) as $accept_command
-    | (
       if .status == "review_required" then
         "<a class=\"compare-link\" href=\"" + (.compare_url | @html) + "\">Review diff ↗</a>"
       elif .status == "unreviewed" then
@@ -921,10 +918,7 @@ render_pages() {
     ) as $review_link
     | (
       if .status == "review_required" or .status == "unreviewed" then
-        "<div class=\"review-actions\">"
-        + $review_link
-        + "<button type=\"button\" class=\"copy-command\" data-command=\"" + ($accept_command | @html) + "\">Copy command</button>"
-        + "</div>"
+        $review_link
       else
         ""
       end
