@@ -152,17 +152,15 @@ jobs:
               candidate_kind=${candidate_ref%%:*}
               candidate_value=${candidate_ref#*:}
 
-              case "$candidate_kind" in
-                commit)
-                  if [[ "$expected_reviewed_ref" == commit:* ]]; then
-                    review_url="$repo_url/compare/${expected_reviewed_ref#*:}...$candidate_value"
-                  else
-                    review_url="$repo_url/commit/$candidate_value"
-                  fi
-                  ;;
-                release) review_url="$repo_url/releases/tag/$candidate_value" ;;
-                tag) review_url="$repo_url/tree/$candidate_value" ;;
-              esac
+              if [[ "$expected_reviewed_ref" != "none" ]]; then
+                review_url="$repo_url/compare/${expected_reviewed_ref#*:}...$candidate_value"
+              else
+                case "$candidate_kind" in
+                  commit) review_url="$repo_url/commit/$candidate_value" ;;
+                  release) review_url="$repo_url/releases/tag/$candidate_value" ;;
+                  tag) review_url="$repo_url/tree/$candidate_value" ;;
+                esac
+              fi
 
               echo "### \`$plugin\`"
               echo
