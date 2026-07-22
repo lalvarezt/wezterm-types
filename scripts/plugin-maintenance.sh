@@ -155,26 +155,35 @@ reviewed_ref_text() {
   fi
 
   if [[ "$kind" == "commit" ]]; then
-    printf '%s:%s\n' "$kind" "${value:0:7}"
+    printf '%s\n' "${value:0:7}"
     return
   fi
 
-  printf '%s:%s\n' "$kind" "$value"
+  printf '%s\n' "$value"
+}
+
+reviewed_ref_badge_url() {
+  local reviewed_text=$1
+  local encoded
+
+  encoded=$(jq -rn --arg value "$reviewed_text" '$value | @uri')
+  printf 'https://img.shields.io/static/v1?label=current&message=%s&color=blue\n' "$encoded"
 }
 
 render_table_block() {
-  printf '| Plugin | Documentation | Neovim Help | Status |\n'
+  printf '| Plugin | Documentation | Neovim Help | &nbsp;Status&nbsp;/&nbsp;Current&nbsp; |\n'
   printf '| --- | --- | --- | --- |\n'
 
   while IFS=$'\t' read -r slug readme_name repo reviewed_kind reviewed_value; do
-    local plugin_cell docs_cell help_cell status_cell reviewed_text
+    local plugin_cell docs_cell help_cell status_cell reviewed_text reviewed_badge_url
     local docs_path="docs/${slug}.md"
     local vimdoc_path="doc/wezterm-types-plugin.${slug}.txt"
     plugin_cell="[$readme_name](https://github.com/$repo)"
     docs_cell="[$docs_path](./$docs_path)"
     help_cell="[:h $(basename "$vimdoc_path")](./$vimdoc_path)"
     reviewed_text=$(reviewed_ref_text "$reviewed_kind" "$reviewed_value")
-    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br><code>${reviewed_text}</code>"
+    reviewed_badge_url=$(reviewed_ref_badge_url "$reviewed_text")
+    status_cell="[![status]($(badge_url "$slug"))]($(report_url "$slug"))<br>![Current](${reviewed_badge_url})"
 
     printf '| %s | %s | %s | %s |\n' \
       "$plugin_cell" "$docs_cell" "$help_cell" "$status_cell"
@@ -372,8 +381,8 @@ validate_manifest_schema() {
   ' "$MANIFEST_PATH" >/dev/null || die "Manifest validation failed"
 
   while IFS= read -r ref; do
-    git check-ref-format "refs/tags/$ref" >/dev/null 2>&1 \
-      || die "Manifest contains an invalid release or tag ref: $ref"
+    git check-ref-format "refs/tags/$ref" >/dev/null 2>&1 ||
+      die "Manifest contains an invalid release or tag ref: $ref"
   done < <(jq -r '.[] | select(.reviewed_ref.kind == "release" or .reviewed_ref.kind == "tag") | .reviewed_ref.value' "$MANIFEST_PATH")
 }
 
@@ -399,8 +408,8 @@ validate_inventory() {
     | .[]
     | "- [" + .readme_name + "](./" + .slug + ".md)"
   ' "$MANIFEST_PATH" | jq -Rsc 'split("\n") | map(select(length > 0))')
-  actual_docs_readme=$(awk '/^- \[[^]]+\]\(\.\/[^)]+\.md\)$/ { print }' "$DOCS_README_PATH" \
-    | jq -Rsc 'split("\n") | map(select(length > 0))')
+  actual_docs_readme=$(awk '/^- \[[^]]+\]\(\.\/[^)]+\.md\)$/ { print }' "$DOCS_README_PATH" |
+    jq -Rsc 'split("\n") | map(select(length > 0))')
   compare_lists "docs/README.md" "$expected_docs_readme" "$actual_docs_readme"
 
   [[ -f "$PANVIMDOC_PATH" ]] || die "Missing panvimdoc plugin configuration: $PANVIMDOC_PATH"
@@ -632,37 +641,37 @@ accept() {
   if [[ "$report_ref" != "$to_arg" ]]; then
     report_kind=${report_ref%%:*}
     report_value=${report_ref#*:}
-    [[ "$to_kind" == "commit" && "$report_kind" == "commit" ]] \
-      || die "Custom acceptance refs are only supported for commit-tracked plugins"
-    [[ "$to_value" =~ ^[[:xdigit:]]{40}$ ]] \
-      || die "Custom commit refs must use a full 40-character SHA"
+    [[ "$to_kind" == "commit" && "$report_kind" == "commit" ]] ||
+      die "Custom acceptance refs are only supported for commit-tracked plugins"
+    [[ "$to_value" =~ ^[[:xdigit:]]{40}$ ]] ||
+      die "Custom commit refs must use a full 40-character SHA"
 
     require_cmd gh
     repo=$(jq -r --arg slug "$slug" '.plugins[] | select(.slug == $slug) | .repo' "$SYNC_PATH")
     [[ "$repo" =~ ^[^/]+/[^/]+$ ]] || die "Invalid upstream repository for $slug: $repo"
 
-    candidate_sha=$(gh api "repos/$repo/commits/$to_value" --jq '.sha') \
-      || die "Cannot resolve candidate commit $to_value for $slug"
+    candidate_sha=$(gh api "repos/$repo/commits/$to_value" --jq '.sha') ||
+      die "Cannot resolve candidate commit $to_value for $slug"
     candidate_sha=${candidate_sha,,}
     to_value=${to_value,,}
     [[ "$candidate_sha" == "$to_value" ]] || die "Candidate commit did not resolve exactly: $to_value"
 
-    comparison=$(gh api "repos/$repo/compare/$candidate_sha...$report_value") \
-      || die "Cannot compare candidate $candidate_sha with upstream $report_value"
+    comparison=$(gh api "repos/$repo/compare/$candidate_sha...$report_value") ||
+      die "Cannot compare candidate $candidate_sha with upstream $report_value"
     merge_base_sha=$(jq -r '.merge_base_commit.sha' <<<"$comparison")
-    [[ "$merge_base_sha" == "$candidate_sha" ]] \
-      || die "Candidate commit $candidate_sha is not an ancestor of upstream $report_value"
+    [[ "$merge_base_sha" == "$candidate_sha" ]] ||
+      die "Candidate commit $candidate_sha is not an ancestor of upstream $report_value"
 
     if [[ "$current_ref" != "none" ]]; then
-      [[ "$from_kind" == "commit" ]] \
-        || die "Cannot accept an intermediate commit from a non-commit baseline"
-      baseline_sha=$(gh api "repos/$repo/commits/$from_value" --jq '.sha') \
-        || die "Cannot resolve reviewed baseline $from_value for $slug"
-      comparison=$(gh api "repos/$repo/compare/$baseline_sha...$candidate_sha") \
-        || die "Cannot compare reviewed baseline $baseline_sha with candidate $candidate_sha"
+      [[ "$from_kind" == "commit" ]] ||
+        die "Cannot accept an intermediate commit from a non-commit baseline"
+      baseline_sha=$(gh api "repos/$repo/commits/$from_value" --jq '.sha') ||
+        die "Cannot resolve reviewed baseline $from_value for $slug"
+      comparison=$(gh api "repos/$repo/compare/$baseline_sha...$candidate_sha") ||
+        die "Cannot compare reviewed baseline $baseline_sha with candidate $candidate_sha"
       merge_base_sha=$(jq -r '.merge_base_commit.sha' <<<"$comparison")
-      [[ "$merge_base_sha" == "$baseline_sha" ]] \
-        || die "Candidate commit $candidate_sha is not newer than reviewed baseline $baseline_sha"
+      [[ "$merge_base_sha" == "$baseline_sha" ]] ||
+        die "Candidate commit $candidate_sha is not newer than reviewed baseline $baseline_sha"
     fi
 
     to_arg="commit:$candidate_sha"
@@ -715,8 +724,8 @@ validate_pages_dir() {
   build_resolved=$(realpath -m -- "$BUILD_DIR")
   parent=$(dirname -- "$resolved")
 
-  [[ "$resolved" != "/" && "$resolved" != "$root_resolved" && "$resolved" != "$build_resolved" ]] \
-    || die "Refusing to replace unsafe pages directory: $resolved"
+  [[ "$resolved" != "/" && "$resolved" != "$root_resolved" && "$resolved" != "$build_resolved" ]] ||
+    die "Refusing to replace unsafe pages directory: $resolved"
   [[ "$parent" != "/" ]] || die "Refusing to replace unsafe pages directory: $resolved"
   [[ ! -L "$PAGES_DIR" ]] || die "Refusing to replace symlinked pages directory: $PAGES_DIR"
   PAGES_DIR=$resolved
@@ -750,7 +759,7 @@ render_pages() {
       color="brightgreen"
       ;;
     review_required)
-      message="review required"
+      message="to review"
       color="yellow"
       ;;
     unreviewed)
@@ -775,7 +784,7 @@ render_pages() {
     "<ul class=\"summary\">"
     + "<li><strong>Total:</strong> \(.summary.total)</li>"
     + "<li><strong>Reviewed:</strong> \(.summary.reviewed)</li>"
-    + "<li><strong>Review required:</strong> \(.summary.review_required)</li>"
+    + "<li><strong>To Review:</strong> \(.summary.review_required)</li>"
     + "<li><strong>Unreviewed:</strong> \(.summary.unreviewed)</li>"
     + "<li><strong>Errors:</strong> \(.summary.error)</li>"
     + "<li><strong>Checked at:</strong> <code>\(.checked_at)</code></li>"
