@@ -1,6 +1,6 @@
 TAGS_CMD = nvim --clean --headless -c 'helptags doc/' -c 'qa!'
 
-.PHONY: all clean distclean help helptags
+.PHONY: all clean distclean help helptags plugin-maintenance-validate plugin-table plugin-table-check
 
 all: help
 
@@ -13,6 +13,15 @@ helptags: ## Generate Vim help tags file
 	@echo "Generating helptags..."
 	@$(TAGS_CMD) > /dev/null 2>&1
 	@echo
+
+plugin-table: ## Regenerate the README plugin table
+	@./scripts/plugin-maintenance.sh table
+
+plugin-table-check: ## Verify the README plugin table is current
+	@./scripts/plugin-maintenance.sh table --check
+
+plugin-maintenance-validate: ## Validate the plugin maintenance manifest and README table
+	@./scripts/plugin-maintenance.sh validate
 
 clean: ## Clean help tags file
 	@rm -rf doc/tags

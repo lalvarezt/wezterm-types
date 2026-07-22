@@ -12,6 +12,7 @@ contributing code, knowing what to do in specific cases, etc.
 - [Guidelines](#guidelines)
   - [What I Will Not Accept](#what-i-will-not-accept)
   - [Plugins](#plugins)
+  - [Plugin Maintenance](#plugin-maintenance)
 - [Recommendations](#recommendations)
   - [`pre-commit`](#pre-commit)
 - [Annotations Guide](#annotations-guide)
@@ -62,18 +63,69 @@ annotations.
   ```bash
   ./scripts/new-plugin.sh PLUGIN-NAME # ONLY DASHES `-` ALLOWED!
   ```
+  The helper creates the Lua, Markdown, and Vimdoc files and inserts a slug-sorted placeholder entry
+  in `metadata/plugins.json`. Replace its `repo` and `readme_name` TODO values before continuing.
 - Edit your plugin annotations in [`lua/wezterm/types/plugins`](./lua/wezterm/types/plugins). Use
   other plugin's annotations as references, and make sure to read the [Annotations Guide](#annotations-guide)
   section.
 - Edit `docs/<MY-PLUGIN>.md`. Use the other plugin docs as reference.
 - Add the document mentioned above in [docs/README.md](./docs/README.md). **RESPECT THE ALPHABETIC ORDER**!
-- Add a new entry in the `README.md`'s [Featured Plugins](https://github.com/DrKJeff16/wezterm-types#featured-plugins).
-  Respect the alphabetic order and the table specification!
+- Add the plugin's matching `vimdoc` and `pandoc` inputs to
+  [`.github/workflows/panvimdoc_plugins.yml`](./.github/workflows/panvimdoc_plugins.yml).
+- Follow the [Plugin Maintenance](#plugin-maintenance) workflow below to register the plugin,
+  regenerate the generated `README.md` table, and run validation.
 - Commit then push your changes. Make your PR afterwards.
   - Your commit message must look like this:
     ```
     feat(PLUGIN-NAME): add type annotations
     ```
+
+### Plugin Maintenance
+
+Use this section both when adding a plugin for the first time and when updating an existing one.
+The manifest is the source of truth for the generated `README.md` table and maintenance dashboard.
+
+1. Add or update the plugin entry in [`metadata/plugins.json`](./metadata/plugins.json). For new
+   plugins, `new-plugin.sh` creates this slug-sorted placeholder:
+   ```json
+   {
+     "slug": "plugin-name",
+     "repo": "TODO: replace with owner/repository",
+     "readme_name": "TODO: replace with repository display name",
+     "reviewed_ref": null
+   }
+   ```
+   Replace both TODO values. `reviewed_ref` records only the last upstream release, tag, or commit
+   deliberately reviewed by a maintainer; it does not record annotation provenance or coverage.
+   Use `null` when a plugin has not been reviewed yet.
+
+2. For a new plugin, complete every inventory step above. Validation requires exactly one matching
+   Lua file, Markdown document, Vimdoc file, `docs/README.md` entry, and panvimdoc configuration.
+
+3. Regenerate the `README.md` featured plugin table:
+   ```bash
+   ./scripts/plugin-maintenance.sh table
+   ```
+   Do not edit the generated table in `README.md` by hand.
+
+4. Run local validation:
+   ```bash
+   ./scripts/plugin-maintenance.sh validate
+   ```
+   `validate` checks the exact manifest schema and order, every plugin inventory, panvimdoc
+   registration, and README table freshness.
+
+5. Review plugins marked `review_required` or `unreviewed` on the published maintenance dashboard.
+   Leave the baseline unchanged while functional work remains outstanding. When a change can be
+   accepted, comment `/accept <slug>` on the rolling maintenance issue. For a commit-tracked plugin,
+   use `/accept <slug> commit:<full-sha>` to accept an intermediate commit. Multiple selections can
+   be combined as `/accept <slug> [commit:<full-sha>] <slug> [commit:<full-sha>] ...`; the workflow
+   opens one PR containing the selected manifest and generated README changes.
+
+6. Comment `/refresh` to run maintenance immediately and update the dashboard and rolling digest,
+   or `/help` to print the complete command reference. GitHub Actions also refreshes the report every
+   Sunday at `06:17 UTC` and maintains the rolling issue named
+   `Plugin maintenance: upstream changes to review`.
 
 ---
 

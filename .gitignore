@@ -2,6 +2,7 @@
 /wezterm.lua
 
 /doc/tags
+.tmp/
 
 # Python Stuff
 .mypy_cache/
