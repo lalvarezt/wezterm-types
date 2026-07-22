@@ -110,7 +110,7 @@
     "readme_name": "lib.wezterm",
     "reviewed_ref": {
       "kind": "commit",
-      "value": "d87b2025dffcd6168a02d7f2df4e28221215c5d5"
+      "value": "ea5163d22ee4fd9045e6df9a0ba647eb38feba22"
     }
   },
   {
@@ -119,7 +119,7 @@
     "readme_name": "listeners.wezterm",
     "reviewed_ref": {
       "kind": "commit",
-      "value": "938eb37ddae3eec7540a40e07faae0ac80139fac"
+      "value": "990e1d1f06b692035866cbd65df203bb19227471"
     }
   },
   {
@@ -128,7 +128,7 @@
     "readme_name": "log.wz",
     "reviewed_ref": {
       "kind": "release",
-      "value": "1.0.1"
+      "value": "1.0.2"
     }
   },
   {
@@ -137,7 +137,7 @@
     "readme_name": "memo.wz",
     "reviewed_ref": {
       "kind": "release",
-      "value": "0.1.1"
+      "value": "0.1.3"
     }
   },
   {
