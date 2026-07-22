@@ -130,7 +130,7 @@ The manifest is the source of truth for the generated `README.md` table and main
    the reviewed upstream baseline; it does not claim annotation coverage.
 
 7. The maintenance dashboard is published by the `Plugin Maintenance` workflow:
-   - every Sunday at `06:17 UTC`;
+   - every Sunday at `17:00 UTC`;
    - after `/refresh` or a manual workflow run on `main`; and
    - after a push to `main` changes maintenance inputs and the generated content differs from the
      currently published site. Pull requests validate the maintenance implementation and plugin
