@@ -102,7 +102,10 @@
     "slug": "lantern",
     "repo": "sravioli/lantern.wz",
     "readme_name": "lantern.wz",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "release",
+      "value": "1.2.0"
+    }
   },
   {
     "slug": "lib",
@@ -234,7 +237,10 @@
     "slug": "ribbon",
     "repo": "sravioli/ribbon.wz",
     "readme_name": "ribbon.wz",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "release",
+      "value": "1.1.1"
+    }
   },
   {
     "slug": "rosepine",
@@ -258,7 +264,10 @@
     "slug": "sigil",
     "repo": "sravioli/sigil.wz",
     "readme_name": "sigil.wz",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "release",
+      "value": "1.0.1"
+    }
   },
   {
     "slug": "smart-splits",
@@ -291,13 +300,19 @@
     "slug": "sync",
     "repo": "dfsramos/wezterm-sync",
     "readme_name": "wezterm-sync",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "commit",
+      "value": "da46378c11cbd51478111ad04a474bc1964eb01e"
+    }
   },
   {
     "slug": "sync-panes",
     "repo": "annie444/sync-panes.wez",
     "readme_name": "sync-panes.wez",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "commit",
+      "value": "2cfa9fea761e507b62a09daa1d8bef440a40265c"
+    }
   },
   {
     "slug": "tabline",
@@ -402,7 +417,10 @@
     "slug": "widgets",
     "repo": "usrivastava92/widgets.wez",
     "readme_name": "widgets.wez",
-    "reviewed_ref": null
+    "reviewed_ref": {
+      "kind": "commit",
+      "value": "0eaf01c12abcddc9d0973ed826692754c0b1cb50"
+    }
   },
   {
     "slug": "workspace-picker",
