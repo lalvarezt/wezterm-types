@@ -207,7 +207,7 @@ jobs:
           - `/refresh` — refresh upstream state, publish the dashboard, and update this digest.
           - `/help` — show this command reference.
 
-          Commands must be the only content in a comment. Acceptance commands create a PR; they do not modify annotation files directly.
+          Commands work only on the dedicated `Plugin maintenance: upstream changes to review` issue and must be the only content in a comment. Acceptance commands create one PR when they change a reviewed baseline; they do not modify annotation files directly.
           EOF
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$body"
 

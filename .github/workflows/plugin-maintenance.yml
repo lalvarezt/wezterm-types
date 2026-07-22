@@ -216,6 +216,7 @@ jobs:
               "",
               "[Open the maintenance dashboard](\($dashboard))",
               "",
+              "Maintenance commands are accepted only on this issue. Make the command the only content of the comment.",
               "To accept reviewed refs, copy one command below or combine multiple plugin selections in one comment.",
               "Use `/accept slug-one slug-two` for latest refs. A `commit:<full-sha>` applies to the slug immediately before it.",
               "Comment `/refresh` to regenerate this report or `/help` to list every command.",

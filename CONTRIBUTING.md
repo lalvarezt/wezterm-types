@@ -115,17 +115,31 @@ The manifest is the source of truth for the generated `README.md` table and main
    `validate` checks the exact manifest schema and order, every plugin inventory, panvimdoc
    registration, and README table freshness.
 
-5. Review plugins marked `review_required` or `unreviewed` on the published maintenance dashboard.
-   Leave the baseline unchanged while functional work remains outstanding. When a change can be
-   accepted, comment `/accept <slug>` on the rolling maintenance issue. For a commit-tracked plugin,
-   use `/accept <slug> commit:<full-sha>` to accept an intermediate commit. Multiple selections can
-   be combined as `/accept <slug> [commit:<full-sha>] <slug> [commit:<full-sha>] ...`; the workflow
-   opens one PR containing the selected manifest and generated README changes.
+5. Use the dedicated issue named `Plugin maintenance: upstream changes to review` for maintenance
+   commands. Commands are accepted only on that issue, from collaborators with write access, and
+   must be the only content in a comment:
+   - `/help` prints the complete command reference.
+   - `/accept <slug>` accepts the latest upstream ref. For a commit-tracked plugin,
+     `/accept <slug> commit:<full-sha>` accepts an intermediate commit. Combine selections as
+     `/accept <slug> [commit:<full-sha>] <slug> [commit:<full-sha>] ...` to open one PR containing
+     the selected reviewed-baseline changes in `metadata/plugins.json`.
+   - `/refresh` starts the maintenance workflow to refresh the dashboard and issue digest.
 
-6. Comment `/refresh` to run maintenance immediately and update the dashboard and rolling digest,
-   or `/help` to print the complete command reference. GitHub Actions also refreshes the report every
-   Sunday at `06:17 UTC` and maintains the rolling issue named
-   `Plugin maintenance: upstream changes to review`.
+6. Review plugins marked `review_required` or `unreviewed` on the published maintenance dashboard.
+   Leave the baseline unchanged while functional work remains outstanding. Acceptance records only
+   the reviewed upstream baseline; it does not claim annotation coverage.
+
+7. The maintenance dashboard is published by the `Plugin Maintenance` workflow:
+   - every Sunday at `06:17 UTC`;
+   - after `/refresh` or a manual workflow run on `main`; and
+   - after a push to `main` changes maintenance inputs and the generated content differs from the
+     currently published site. Pull requests validate the maintenance implementation and plugin
+     inventory but do not publish the site.
+
+8. If the dedicated issue is missing, open the repository's **Actions** tab, select
+   **Plugin Maintenance**, choose **Run workflow**, and run it on `main`. After Pages is deployed,
+   the workflow creates the labeled issue when at least one plugin needs review. If every plugin is
+   reviewed, no issue is needed; an existing digest is updated and closed instead.
 
 ---
 
