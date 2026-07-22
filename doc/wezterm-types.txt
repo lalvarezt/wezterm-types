@@ -95,13 +95,13 @@ This project also features type annotations for various WezTerm plugins.
 
   lantern.wz                         docs/lantern.md                    :h wezterm-types-plugin.lantern.txt                 [status]none
 
-  lib.wezterm                        docs/lib.md                        :h wezterm-types-plugin.lib.txt                     [status]commit:d87b202
+  lib.wezterm                        docs/lib.md                        :h wezterm-types-plugin.lib.txt                     [status]commit:ea5163d
 
-  listeners.wezterm                  docs/listeners.md                  :h wezterm-types-plugin.listeners.txt               [status]commit:938eb37
+  listeners.wezterm                  docs/listeners.md                  :h wezterm-types-plugin.listeners.txt               [status]commit:990e1d1
 
-  log.wz                             docs/log.md                        :h wezterm-types-plugin.log.txt                     [status]release:1.0.1
+  log.wz                             docs/log.md                        :h wezterm-types-plugin.log.txt                     [status]release:1.0.2
 
-  memo.wz                            docs/memo.md                       :h wezterm-types-plugin.memo.txt                    [status]release:0.1.1
+  memo.wz                            docs/memo.md                       :h wezterm-types-plugin.memo.txt                    [status]release:0.1.3
 
   modal.wezterm                      docs/modal.md                      :h wezterm-types-plugin.modal.txt                   [status]release:1.0
 
