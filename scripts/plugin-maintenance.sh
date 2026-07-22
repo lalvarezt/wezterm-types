@@ -897,6 +897,17 @@ render_pages() {
       end
     ) as $reviewed_text
     | (
+      if .status == "reviewed" then
+        {text: "reviewed", class: "reviewed"}
+      elif .status == "review_required" then
+        {text: "to review", class: "review-required"}
+      elif .status == "unreviewed" then
+        {text: "unreviewed", class: "unreviewed"}
+      else
+        {text: "error", class: "error"}
+      end
+    ) as $status_badge
+    | (
       if .upstream_ref == null then
         ""
       elif .upstream_ref.kind == "commit" then
@@ -927,18 +938,14 @@ render_pages() {
       + "<td><a href=\"https://github.com/\(.repo)\">\(.readme_name | @html)</a></td>"
       + "<td><a href=\"https://github.com/\($repo_slug)/blob/\($repo_branch)/docs/\(.slug).md\">docs/\(.slug).md</a></td>"
       + "<td><a href=\"https://github.com/\($repo_slug)/blob/\($repo_branch)/doc/wezterm-types-plugin.\(.slug).txt\">doc/wezterm-types-plugin.\(.slug).txt</a></td>"
-      + "<td><img alt=\"\(.status | @html)\" src=\"BADGE_URL:\(.slug)\" />"
+      + "<td><span class=\"badge\"><span class=\"badge__label\">status</span><span class=\"badge__value badge__value--\($status_badge.class)\">\($status_badge.text)</span></span>"
       + (if .status == "error" then "<div class=\"error-text\">" + (.error | @html) + "</div>" else "" end)
       + "</td>"
-      + "<td><code>\($reviewed_text | @html)</code></td>"
-      + "<td><code>\($upstream_text | @html)</code></td>"
+      + "<td><span class=\"badge\"><span class=\"badge__label\">reviewed</span><span class=\"badge__value badge__value--ref\">\($reviewed_text | @html)</span></span></td>"
+      + "<td><span class=\"badge\"><span class=\"badge__label\">upstream</span><span class=\"badge__value badge__value--ref\">\($upstream_text | @html)</span></span></td>"
       + "<td>" + $actions_cell + "</td>"
       + "</tr>"
   ' "$report_path")
-
-  while IFS= read -r slug; do
-    plugin_rows=${plugin_rows//BADGE_URL:$slug/$(badge_url "$slug")}
-  done < <(jq -r '.plugins[].slug' "$report_path")
 
   new_temp
   summary_tmp=$TEMP_PATH
