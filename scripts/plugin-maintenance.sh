@@ -47,8 +47,12 @@ table_usage() {
   printf 'Usage: %s table [--check]\n' "$0"
 }
 
+sync_usage() {
+  printf 'Usage: %s sync [slug ...]\n' "$0"
+}
+
 accept_usage() {
-  printf 'Usage: %s accept <slug> --from <none|kind:value> --to <kind:value>\n' "$0"
+  printf 'Usage: %s accept <slug> --from <none|kind:value> --to <kind:value> [--defer-generated]\n' "$0"
 }
 
 repo_slug() {
@@ -432,14 +436,31 @@ validate() {
 
 sync() {
   local checked_at repo_slug_value pages_base_url_value tmp tmp_err
-
-  if [[ $# -gt 0 ]]; then
-    die "$(main_usage)"
-  fi
+  local selected_slugs=null selected_count unique_count manifest_count unknown_slugs slug
 
   require_cmd gh
   require_cmd jq
   validate_manifest_schema
+
+  if [[ $# -gt 0 ]]; then
+    for slug in "$@"; do
+      [[ "$slug" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "$(sync_usage)"
+    done
+    selected_slugs=$(printf '%s\n' "$@" | jq -Rsc 'split("\n") | map(select(length > 0))')
+    selected_count=$(jq 'length' <<<"$selected_slugs")
+    unique_count=$(jq 'unique | length' <<<"$selected_slugs")
+    [[ "$selected_count" == "$unique_count" ]] || die "Duplicate plugin slugs are not allowed"
+
+    manifest_count=$(jq --argjson slugs "$selected_slugs" \
+      '[.[] | select(.slug as $slug | $slugs | index($slug))] | length' \
+      "$MANIFEST_PATH")
+    if [[ "$manifest_count" != "$selected_count" ]]; then
+      unknown_slugs=$(jq -r --argjson slugs "$selected_slugs" \
+        '$slugs - [.[].slug] | join(", ")' \
+        "$MANIFEST_PATH")
+      die "Unknown plugin slug(s): $unknown_slugs"
+    fi
+  fi
 
   mkdir -p "$BUILD_DIR"
   new_temp
@@ -450,7 +471,10 @@ sync() {
   repo_slug_value=$(repo_slug)
   pages_base_url_value=$(pages_base_url)
 
-  jq -c 'sort_by(.readme_name | ascii_downcase)[]' "$MANIFEST_PATH" | while IFS= read -r entry; do
+  jq -c --argjson selected_slugs "$selected_slugs" '
+    (if $selected_slugs == null then . else [.[] | select(.slug as $slug | $selected_slugs | index($slug))] end)
+    | sort_by(.readme_name | ascii_downcase)[]
+  ' "$MANIFEST_PATH" | while IFS= read -r entry; do
     local repo reviewed_kind reviewed_value repo_json release_json repo_url default_branch upstream_kind upstream_value status
     repo=$(jq -r '.repo' <<<"$entry")
     reviewed_kind=$(jq -r '.reviewed_ref.kind // "none"' <<<"$entry")
@@ -541,6 +565,7 @@ parse_ref_arg() {
 accept() {
   local slug=${1:-}
   local from_arg="" to_arg=""
+  local defer_generated=false
   local from_kind from_value to_kind to_value manifest_count current_ref report_count report_status report_ref
   local report_kind report_value repo candidate_sha baseline_sha comparison merge_base_sha
   local tmp manifest_backup readme_backup
@@ -559,6 +584,10 @@ accept() {
       [[ $# -gt 1 ]] || die "$(accept_usage)"
       to_arg=$2
       shift 2
+      ;;
+    --defer-generated)
+      defer_generated=true
+      shift
       ;;
     *) die "$(accept_usage)" ;;
     esac
@@ -641,6 +670,16 @@ accept() {
 
   new_temp
   tmp=$TEMP_PATH
+
+  if [[ "$defer_generated" == "true" ]]; then
+    jq --arg slug "$slug" --arg kind "$to_kind" --arg value "$to_value" '
+      map(if .slug == $slug then .reviewed_ref = {kind: $kind, value: $value} else . end)
+    ' "$MANIFEST_PATH" >"$tmp"
+    mv "$tmp" "$MANIFEST_PATH"
+    printf 'Accepted %s: %s -> %s (generated files deferred)\n' "$slug" "$from_arg" "$to_arg"
+    return
+  fi
+
   new_temp
   manifest_backup=$TEMP_PATH
   new_temp
