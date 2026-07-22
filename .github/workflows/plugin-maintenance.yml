@@ -30,18 +30,8 @@ on:
       - main
     paths:
       - ".github/workflows/plugin-maintenance*.yml"
-      - ".github/workflows/panvimdoc_plugins.yml"
-      - "CONTRIBUTING.md"
-      - "Makefile"
-      - "README.md"
-      - "docs/*.md"
-      - "doc/wezterm-types-plugin.*.txt"
-      - "lua/wezterm/types/plugins/*.lua"
       - "metadata/plugins.json"
-      - "scripts/new-plugin.sh"
       - "scripts/plugin-maintenance.sh"
-      - "scripts/template.lua"
-      - "scripts/template.md"
       - "scripts/templates/plugin-maintenance-*.tmpl"
 
 jobs:
