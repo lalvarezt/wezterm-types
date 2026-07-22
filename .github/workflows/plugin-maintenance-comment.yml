@@ -181,7 +181,7 @@ jobs:
           selection=$(jq -r 'map("`" + .plugin + "` at `" + .candidate_ref + "`") | join(", ")' <<< "$ACCEPTANCES")
           workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance-accept.yml"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
-            "Acceptance requested for $selection in one PR. [Track the acceptance workflow]($workflow_url)."
+            "$(printf 'Acceptance requested for %s in one PR.\n\n[Track the acceptance workflow](%s).' "$selection" "$workflow_url")"
 
       - name: Dispatch maintenance refresh
         if: steps.command.outputs.action == 'refresh'
@@ -194,7 +194,7 @@ jobs:
 
           workflow_url="https://github.com/$GITHUB_REPOSITORY/actions/workflows/plugin-maintenance.yml"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
-            "Maintenance refresh requested. [Track the maintenance workflow]($workflow_url)."
+            "$(printf 'Maintenance refresh requested.\n\n[Track the maintenance workflow](%s).' "$workflow_url")"
 
       - name: Show command help
         if: steps.command.outputs.action == 'help'
